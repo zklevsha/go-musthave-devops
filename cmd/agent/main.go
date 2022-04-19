@@ -92,10 +92,11 @@ func poll() {
 }
 
 func send(url string) {
-	_, err := http.Post(url, "text/plain", bytes.NewBufferString(""))
+	resp, err := http.Post(url, "text/plain", bytes.NewBufferString(""))
 	if err != nil {
 		log.Fatalf("An Error Occured %v", err)
 	}
+	defer resp.Body.Close()
 }
 
 func report() {
