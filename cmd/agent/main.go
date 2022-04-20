@@ -170,14 +170,14 @@ func report(ctx context.Context) {
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	c := make(chan os.Signal, 1) // we need to reserve to buffer size 1, so the notifier are not blocked
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	wg.Add(2)
 	go poll(ctx)
 	go report(ctx)
 	sig := <-c
-	log.Printf("INFO got a signal '%v', start shutting down...\n", sig) // put breakpoint here
+	log.Printf("INFO main got a signal '%v', start shutting down...\n", sig)
 	cancel()
 	wg.Wait()
-	log.Printf("Shutdown complete")
+	log.Printf("INFO main Shutdown complete")
 }

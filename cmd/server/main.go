@@ -1,14 +1,14 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
-	"strings"
 	"sync"
+
+	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 )
 
 var counters = map[string]int64{
@@ -47,7 +47,6 @@ var gauges = map[string]float64{
 
 var counterMx sync.Mutex
 var gaugeMx sync.Mutex
-var urlRegexp = regexp.MustCompile(`^\/update\/(counter|gauge)\/[A-Za-z]+\/(\d+(?:\.\d+)?)$`)
 
 func saveCounter(metricName string, metricValue int64) error {
 
@@ -68,14 +67,6 @@ func saveGauge(metricName string, metricValue float64) error {
 		return nil
 	}
 	return fmt.Errorf("counter metric %s does not exists", metricName)
-}
-
-func pasrseUrl(url string) (metricType string, metricName string, metricValue string, err error) {
-	if !urlRegexp.Match([]byte(url)) {
-		return "", "", "", errors.New("failed to parse url. Expected format /update/<metric type>/<metric_name>/<metric_value>")
-	}
-	spl := strings.Split(url, "/")
-	return spl[2], spl[3], spl[4], nil
 }
 
 func saveMetric(metricType string, metricName string, metricValue string) error {
@@ -107,25 +98,27 @@ func saveMetric(metricType string, metricName string, metricValue string) error 
 }
 
 func main() {
-	http.HandleFunc("/update/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "for sending metrics use POST", http.StatusBadRequest)
-			return
-		}
-		metricType, metricName, metricValue, err := pasrseUrl(r.URL.Path)
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Post("/update/{metricType}/{metricName}/{metricValue}", func(w http.ResponseWriter, r *http.Request) {
+		metricType := chi.URLParam(r, "metricType")
+		metricName := chi.URLParam(r, "metricName")
+		metricValue := chi.URLParam(r, "metricValue")
+		err := saveMetric(metricType, metricName, metricValue)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-		}
-		err = saveMetric(metricType, metricName, metricValue)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+		} else {
+			w.Write([]byte("metric was saved"))
 		}
 	})
 
 	fmt.Printf("Starting server at port 8080\n")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)
 	}
 }
