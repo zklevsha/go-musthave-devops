@@ -109,13 +109,13 @@ func poll(ctx context.Context) {
 func send(url string) error {
 	resp, err := http.Post(url, "text/plain", bytes.NewBufferString(""))
 	if err != nil {
-		log.Fatalf("An Error Occured %v", err)
+		log.Printf("An Error Occured %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf(err.Error())
 		}
 		return fmt.Errorf("bad StatusCode: %s (URL: %s, Response Body: %s)",
 			url, resp.Status, string(body))

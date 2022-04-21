@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -120,7 +119,8 @@ func main() {
 	})
 
 	fmt.Printf("Starting server at %s\n", serverSocket)
-	if err := http.ListenAndServe(serverSocket, r); err != nil {
-		log.Fatal(err)
-	}
+	// if err := http.ListenAndServe(serverSocket, r); err != nil {
+	// 	fmt.Printf(err.Error())
+	// }
+	http.ListenAndServe(serverSocket, r)
 }
