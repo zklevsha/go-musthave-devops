@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-const pollInterval = time.Duration(time.Millisecond)
-const reportInterval = time.Duration(time.Millisecond)
+const pollInterval = time.Duration(2 * time.Second)
+const reportInterval = time.Duration(10 * time.Second)
 const serverSocket = "127.0.0.1:8080"
 
 var wg sync.WaitGroup
