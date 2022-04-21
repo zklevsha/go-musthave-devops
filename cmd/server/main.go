@@ -119,8 +119,7 @@ func main() {
 	})
 
 	fmt.Printf("Starting server at %s\n", serverSocket)
-	// if err := http.ListenAndServe(serverSocket, r); err != nil {
-	// 	fmt.Printf(err.Error())
-	// }
-	http.ListenAndServe(serverSocket, r)
+	if err := http.ListenAndServe(serverSocket, r); err != nil {
+		fmt.Println(err.Error())
+	}
 }

@@ -115,7 +115,7 @@ func send(url string) error {
 	if resp.StatusCode != 200 {
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Println(err.Error())
 		}
 		return fmt.Errorf("bad StatusCode: %s (URL: %s, Response Body: %s)",
 			url, resp.Status, string(body))
