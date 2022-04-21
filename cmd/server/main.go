@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+const serverSocket = "127.0.0.1:8080"
+
 var counters = map[string]int64{
 	"PollCount": 0,
 }
@@ -117,8 +119,8 @@ func main() {
 		}
 	})
 
-	fmt.Printf("Starting server at port 8080\n")
-	if err := http.ListenAndServe(":8080", r); err != nil {
+	fmt.Printf("Starting server at %s\n", serverSocket)
+	if err := http.ListenAndServe(serverSocket, r); err != nil {
 		log.Fatal(err)
 	}
 }
