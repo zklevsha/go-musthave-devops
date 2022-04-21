@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-const pollInterval = time.Duration(2 * time.Second)
-const reportInterval = time.Duration(10 * time.Second)
+const pollInterval = time.Duration(time.Millisecond)
+const reportInterval = time.Duration(time.Millisecond)
 const serverSocket = "127.0.0.1:8080"
 
 var wg sync.WaitGroup
@@ -125,7 +125,10 @@ func send(url string) error {
 
 func reportGauges() {
 	mutex.Lock()
-	g := gauges
+	g := make(map[string]float64)
+	for k, v := range gauges {
+		g[k] = v
+	}
 	mutex.Unlock()
 	for k, v := range g {
 		err := send(fmt.Sprintf("http://%s/update/%s/%s/%f", serverSocket, "gauge", k, v))
@@ -140,7 +143,10 @@ func reportGauges() {
 
 func reportCounters() {
 	mutex.Lock()
-	c := counters
+	c := make(map[string]int64)
+	for k, v := range counters {
+		c[k] = v
+	}
 	mutex.Unlock()
 
 	for k, v := range c {
