@@ -9,8 +9,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -18,7 +20,7 @@ const pollInterval = time.Duration(time.Millisecond)
 const reportInterval = time.Duration(time.Millisecond)
 const serverSocket = "127.0.0.1:8080"
 
-// var wg sync.WaitGroup
+var wg sync.WaitGroup
 
 var counters = map[string]int64{
 	"PollCount": 0,
@@ -58,7 +60,7 @@ var mutex sync.Mutex
 
 func poll(ctx context.Context) {
 	var counter int64
-	// defer wg.Done()
+	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
@@ -158,7 +160,7 @@ func reportCounters() {
 }
 
 func report(ctx context.Context) {
-	// defer wg.Done()
+	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
@@ -175,13 +177,13 @@ func report(ctx context.Context) {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := make(chan os.Signal, 1)
-	// signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
-	// wg.Add(2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
+	wg.Add(2)
 	go poll(ctx)
 	go report(ctx)
 	sig := <-c
 	log.Printf("INFO main got a signal '%v', start shutting down...\n", sig)
 	cancel()
-	// wg.Wait()
+	wg.Wait()
 	log.Printf("INFO main Shutdown complete")
 }
