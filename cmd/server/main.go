@@ -10,41 +10,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const serverSocket = "127.0.0.1:8080"
+const serverSocket = ":8080"
 
-var counters = map[string]int64{
-	"PollCount": 0,
-}
-var gauges = map[string]float64{
-	"Alloc":         0,
-	"BuckHashSys":   0,
-	"Frees":         0,
-	"GCCPUFraction": 0,
-	"GCSys":         0,
-	"HeapAlloc":     0,
-	"HeapIdle":      0,
-	"HeapInuse":     0,
-	"HeapObjects":   0,
-	"HeapReleased":  0,
-	"HeapSys":       0,
-	"LastGC":        0,
-	"Lookups":       0,
-	"MCacheInuse":   0,
-	"MCacheSys":     0,
-	"MSpanInuse":    0,
-	"MSpanSys":      0,
-	"Mallocs":       0,
-	"NextGC":        0,
-	"NumForcedGC":   0,
-	"NumGC":         0,
-	"OtherSys":      0,
-	"PauseTotalNs":  0,
-	"StackInuse":    0,
-	"StackSys":      0,
-	"Sys":           0,
-	"TotalAlloc":    0,
-	"RandomValue":   0,
-}
+var counters = make(map[string]int64)
+
+var gauges = make(map[string]float64)
 
 var counterMx sync.Mutex
 var gaugeMx sync.Mutex
@@ -55,19 +25,19 @@ func saveCounter(metricName string, metricValue int64) error {
 		counterMx.Lock()
 		counters[metricName] += metricValue
 		counterMx.Unlock()
-		return nil
+	} else {
+		counterMx.Lock()
+		counters[metricName] = metricValue
+		counterMx.Unlock()
 	}
-	return fmt.Errorf("counter metric %s does not exists", metricName)
+	return nil
 }
 
 func saveGauge(metricName string, metricValue float64) error {
-	if _, ok := gauges[metricName]; ok {
-		gaugeMx.Lock()
-		counters[metricName] = int64(metricValue)
-		gaugeMx.Unlock()
-		return nil
-	}
-	return fmt.Errorf("counter metric %s does not exists", metricName)
+	gaugeMx.Lock()
+	gauges[metricName] = metricValue
+	gaugeMx.Unlock()
+	return nil
 }
 
 func saveMetric(metricType string, metricName string, metricValue string) error {
@@ -111,7 +81,7 @@ func main() {
 		metricValue := chi.URLParam(r, "metricValue")
 		err := saveMetric(metricType, metricName, metricValue)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusNotImplemented)
 			return
 		} else {
 			w.Write([]byte("metric was saved"))
