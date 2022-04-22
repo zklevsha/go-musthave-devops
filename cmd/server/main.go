@@ -40,30 +40,30 @@ func saveGauge(metricName string, metricValue float64) error {
 	return nil
 }
 
-func saveMetric(metricType string, metricName string, metricValue string) error {
+func saveMetric(metricType string, metricName string, metricValue string) (error, int) {
 	switch metricType {
 	case "counter":
 		i, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			return fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error())
+			return fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error()), http.StatusBadRequest
 		}
 		err = saveCounter(metricName, i)
 		if err != nil {
-			return fmt.Errorf("failed to save %s:  %s", metricName, err.Error())
+			return fmt.Errorf("failed to save %s:  %s", metricName, err.Error()), http.StatusBadRequest
 		}
-		return nil
+		return nil, http.StatusOK
 	case "gauge":
 		f, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			return fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error())
+			return fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error()), http.StatusBadRequest
 		}
 		err = saveGauge(metricName, f)
 		if err != nil {
-			return fmt.Errorf("failed to save %s:  %s", metricName, err.Error())
+			return fmt.Errorf("failed to save %s:  %s", metricName, err.Error()), http.StatusBadRequest
 		}
-		return nil
+		return nil, http.StatusOK
 	default:
-		return fmt.Errorf("unknown metric type %s", metricType)
+		return fmt.Errorf("unknown metric type %s", metricType), http.StatusBadRequest
 	}
 
 }
@@ -79,9 +79,9 @@ func main() {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
 		metricValue := chi.URLParam(r, "metricValue")
-		err := saveMetric(metricType, metricName, metricValue)
+		err, statusCode := saveMetric(metricType, metricName, metricValue)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotImplemented)
+			http.Error(w, err.Error(), statusCode)
 			return
 		} else {
 			w.Write([]byte("metric was saved"))
