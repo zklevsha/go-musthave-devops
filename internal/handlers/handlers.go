@@ -12,21 +12,15 @@ import (
 func saveCounter(metricName string, metricValue int64) error {
 
 	if _, ok := srvstore.Counters[metricName]; ok {
-		srvstore.CounterMx.Lock()
 		srvstore.Counters[metricName] += metricValue
-		srvstore.CounterMx.Unlock()
 	} else {
-		srvstore.CounterMx.Lock()
 		srvstore.Counters[metricName] = metricValue
-		srvstore.CounterMx.Unlock()
 	}
 	return nil
 }
 
 func saveGauge(metricName string, metricValue float64) error {
-	srvstore.GaugeMx.Lock()
 	srvstore.Gauges[metricName] = metricValue
-	srvstore.GaugeMx.Unlock()
 	return nil
 }
 
@@ -65,9 +59,7 @@ func saveMetric(metricType string, metricName string, metricValue string) (int, 
 func getMetric(metricType string, metricName string) (string, int, error) {
 	switch metricType {
 	case "counter":
-		srvstore.CounterMx.Lock()
 		v, ok := srvstore.Counters[metricName]
-		srvstore.CounterMx.Unlock()
 		if ok {
 			return fmt.Sprintf("%d", v), http.StatusOK, nil
 		} else {
@@ -75,9 +67,7 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 			return "", 404, e
 		}
 	case "gauge":
-		srvstore.GaugeMx.Lock()
 		v, ok := srvstore.Gauges[metricName]
-		srvstore.GaugeMx.Lock()
 		if ok {
 			return fmt.Sprintf("%f", v), http.StatusOK, nil
 		} else {
