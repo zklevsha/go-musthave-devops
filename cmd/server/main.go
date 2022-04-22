@@ -40,30 +40,63 @@ func saveGauge(metricName string, metricValue float64) error {
 	return nil
 }
 
-func saveMetric(metricType string, metricName string, metricValue string) (error, int) {
+func saveMetric(metricType string, metricName string, metricValue string) (int, error) {
 	switch metricType {
 	case "counter":
 		i, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			return fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error()), http.StatusBadRequest
+			msg := fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error())
+			return http.StatusBadRequest, msg
 		}
 		err = saveCounter(metricName, i)
 		if err != nil {
-			return fmt.Errorf("failed to save %s:  %s", metricName, err.Error()), http.StatusBadRequest
+			e := fmt.Errorf("failed to save %s:  %s", metricName, err.Error())
+			return http.StatusBadRequest, e
 		}
-		return nil, http.StatusOK
+		return http.StatusOK, nil
 	case "gauge":
 		f, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			return fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error()), http.StatusBadRequest
+			e := fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error())
+			return http.StatusBadRequest, e
 		}
 		err = saveGauge(metricName, f)
 		if err != nil {
-			return fmt.Errorf("failed to save %s:  %s", metricName, err.Error()), http.StatusBadRequest
+			e := fmt.Errorf("failed to save %s:  %s", metricName, err.Error())
+			return http.StatusBadRequest, e
 		}
-		return nil, http.StatusOK
+		return http.StatusOK, nil
 	default:
-		return fmt.Errorf("unknown metric type %s", metricType), http.StatusBadRequest
+		e := fmt.Errorf("unknown metric type %s", metricType)
+		return http.StatusNotImplemented, e
+	}
+}
+
+func getMetric(metricType string, metricName string) (string, int, error) {
+	switch metricType {
+	case "counter":
+		if _, ok := counters[metricName]; ok {
+			counterMx.Lock()
+			v := counters[metricName]
+			counterMx.Unlock()
+			return fmt.Sprintf("%d", v), http.StatusOK, nil
+		} else {
+			e := fmt.Errorf("counter metric %s does not exists", metricName)
+			return "", 404, e
+		}
+	case "gauge":
+		if _, ok := gauges[metricName]; ok {
+			gaugeMx.Lock()
+			v := gauges[metricName]
+			gaugeMx.Unlock()
+			return fmt.Sprintf("%f", v), http.StatusOK, nil
+		} else {
+			e := fmt.Errorf("gauge metric %s does not exists", metricName)
+			return "", 404, e
+		}
+	default:
+		e := fmt.Errorf("unknown metric type %s", metricType)
+		return "", http.StatusNotImplemented, e
 	}
 
 }
@@ -79,12 +112,24 @@ func main() {
 		metricType := chi.URLParam(r, "metricType")
 		metricName := chi.URLParam(r, "metricName")
 		metricValue := chi.URLParam(r, "metricValue")
-		err, statusCode := saveMetric(metricType, metricName, metricValue)
+		statusCode, err := saveMetric(metricType, metricName, metricValue)
 		if err != nil {
 			http.Error(w, err.Error(), statusCode)
 			return
 		} else {
 			w.Write([]byte("metric was saved"))
+		}
+	})
+
+	r.Get("/value/{metricType}/{metricName}", func(w http.ResponseWriter, r *http.Request) {
+		metricType := chi.URLParam(r, "metricType")
+		metricName := chi.URLParam(r, "metricName")
+		value, statusCode, err := getMetric(metricType, metricName)
+		if err != nil {
+			http.Error(w, err.Error(), statusCode)
+			return
+		} else {
+			w.Write([]byte(value))
 		}
 	})
 
