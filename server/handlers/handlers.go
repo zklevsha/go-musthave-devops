@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/zklevsha/go-musthave-devops/server/storage"
 )
 
@@ -92,10 +92,10 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 }
 
 func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
-	metricValue := chi.URLParam(r, "metricValue")
-	fmt.Println(metricType, metricName, metricValue, "yo")
+	split := strings.Split(r.URL.Path, "/")[2:]
+	metricType := split[0]
+	metricName := split[1]
+	metricValue := split[2]
 	statusCode, err := saveMetric(metricType, metricName, metricValue)
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
@@ -106,8 +106,9 @@ func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetMericHandler(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "metricType")
-	metricName := chi.URLParam(r, "metricName")
+	split := strings.Split(r.URL.Path, "/")[2:]
+	metricType := split[0]
+	metricName := split[1]
 	value, statusCode, err := getMetric(metricType, metricName)
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)

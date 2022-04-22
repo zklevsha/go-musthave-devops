@@ -20,7 +20,6 @@ func main() {
 
 	r.Post("/update/{metricType}/{metricName}/{metricValue}", handlers.UpdateMeticHandler)
 	r.Get("/value/{metricType}/{metricName}", handlers.GetMericHandler)
-
 	fmt.Printf("Starting server at %s\n", serverSocket)
 	if err := http.ListenAndServe(serverSocket, r); err != nil {
 		fmt.Println(err.Error())
