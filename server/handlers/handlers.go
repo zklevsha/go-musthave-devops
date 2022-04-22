@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/zklevsha/go-musthave-devops/internal/storage"
+	"github.com/zklevsha/go-musthave-devops/server/storage"
 )
 
 func saveCounter(metricName string, metricValue int64) error {

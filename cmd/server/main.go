@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
-	"github.com/zklevsha/go-musthave-devops/internal/handlers"
+	"github.com/zklevsha/go-musthave-devops/server/handlers"
 )
 
 const serverSocket = ":8080"
