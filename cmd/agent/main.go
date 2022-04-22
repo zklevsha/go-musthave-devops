@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/zklevsha/go-musthave-devops/agent/poller"
-	"github.com/zklevsha/go-musthave-devops/agent/reporter"
+	"github.com/zklevsha/go-musthave-devops/internal/poller"
+	"github.com/zklevsha/go-musthave-devops/internal/reporter"
 )
 
 const pollInterval = time.Duration(2 * time.Second)

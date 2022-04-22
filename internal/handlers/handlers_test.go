@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/zklevsha/go-musthave-devops/server/handlers"
+	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 )
 
 // TestUpdateMeticHandler

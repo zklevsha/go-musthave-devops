@@ -1,4 +1,4 @@
-package storage
+package srvstore
 
 import "sync"
 

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zklevsha/go-musthave-devops/agent/storage"
+	"github.com/zklevsha/go-musthave-devops/internal/agstore"
 )
 
 func send(url string) error {
@@ -32,12 +32,12 @@ func send(url string) error {
 }
 
 func reportGauges(serverSocket string) {
-	storage.Mutex.Lock()
+	agstore.Mutex.Lock()
 	g := make(map[string]float64)
-	for k, v := range storage.Gauges {
+	for k, v := range agstore.Gauges {
 		g[k] = v
 	}
-	storage.Mutex.Unlock()
+	agstore.Mutex.Unlock()
 	for k, v := range g {
 		err := send(fmt.Sprintf("http://%s/update/%s/%s/%f", serverSocket, "gauge", k, v))
 		if err != nil {
@@ -50,12 +50,12 @@ func reportGauges(serverSocket string) {
 }
 
 func reportCounters(serverSocket string) {
-	storage.Mutex.Lock()
+	agstore.Mutex.Lock()
 	c := make(map[string]int64)
-	for k, v := range storage.Counters {
+	for k, v := range agstore.Counters {
 		c[k] = v
 	}
-	storage.Mutex.Unlock()
+	agstore.Mutex.Unlock()
 
 	for k, v := range c {
 		err := send(fmt.Sprintf("http://%s/update/%s/%s/%d", serverSocket, "counter", k, v))

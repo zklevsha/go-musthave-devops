@@ -6,27 +6,27 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/zklevsha/go-musthave-devops/server/storage"
+	"github.com/zklevsha/go-musthave-devops/internal/srvstore"
 )
 
 func saveCounter(metricName string, metricValue int64) error {
 
-	if _, ok := storage.Counters[metricName]; ok {
-		storage.CounterMx.Lock()
-		storage.Counters[metricName] += metricValue
-		storage.CounterMx.Unlock()
+	if _, ok := srvstore.Counters[metricName]; ok {
+		srvstore.CounterMx.Lock()
+		srvstore.Counters[metricName] += metricValue
+		srvstore.CounterMx.Unlock()
 	} else {
-		storage.CounterMx.Lock()
-		storage.Counters[metricName] = metricValue
-		storage.CounterMx.Unlock()
+		srvstore.CounterMx.Lock()
+		srvstore.Counters[metricName] = metricValue
+		srvstore.CounterMx.Unlock()
 	}
 	return nil
 }
 
 func saveGauge(metricName string, metricValue float64) error {
-	storage.GaugeMx.Lock()
-	storage.Gauges[metricName] = metricValue
-	storage.GaugeMx.Unlock()
+	srvstore.GaugeMx.Lock()
+	srvstore.Gauges[metricName] = metricValue
+	srvstore.GaugeMx.Unlock()
 	return nil
 }
 
@@ -65,9 +65,9 @@ func saveMetric(metricType string, metricName string, metricValue string) (int, 
 func getMetric(metricType string, metricName string) (string, int, error) {
 	switch metricType {
 	case "counter":
-		storage.CounterMx.Lock()
-		v, ok := storage.Counters[metricName]
-		storage.CounterMx.Unlock()
+		srvstore.CounterMx.Lock()
+		v, ok := srvstore.Counters[metricName]
+		srvstore.CounterMx.Unlock()
 		if ok {
 			return fmt.Sprintf("%d", v), http.StatusOK, nil
 		} else {
@@ -75,9 +75,9 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 			return "", 404, e
 		}
 	case "gauge":
-		storage.GaugeMx.Lock()
-		v, ok := storage.Gauges[metricName]
-		storage.GaugeMx.Lock()
+		srvstore.GaugeMx.Lock()
+		v, ok := srvstore.Gauges[metricName]
+		srvstore.GaugeMx.Lock()
 		if ok {
 			return fmt.Sprintf("%f", v), http.StatusOK, nil
 		} else {
