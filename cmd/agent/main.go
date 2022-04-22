@@ -118,7 +118,7 @@ func send(url string) error {
 			log.Println(err.Error())
 		}
 		return fmt.Errorf("bad StatusCode: %s (URL: %s, Response Body: %s)",
-			url, resp.Status, string(body))
+			resp.Status, url, string(body))
 	}
 	defer resp.Body.Close()
 	return nil
@@ -181,6 +181,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	wg.Add(2)
 	go poll(ctx)
+	time.Sleep(time.Second)
 	go report(ctx)
 	sig := <-c
 	log.Printf("INFO main got a signal '%v', start shutting down...\n", sig)
