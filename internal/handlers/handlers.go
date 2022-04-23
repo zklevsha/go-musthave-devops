@@ -79,7 +79,7 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 		v, ok := srvstore.Gauges[metricName]
 		srvstore.GaugeMx.Unlock()
 		if ok {
-			return fmt.Sprintf("%f", v), http.StatusOK, nil
+			return fmt.Sprintf("%.3f", v), http.StatusOK, nil
 		} else {
 			e := fmt.Errorf("gauge metric %s does not exists", metricName)
 			return "", 404, e
