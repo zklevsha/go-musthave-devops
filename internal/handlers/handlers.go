@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/srvstore"
 )
 
@@ -77,7 +77,7 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 	case "gauge":
 		srvstore.GaugeMx.Lock()
 		v, ok := srvstore.Gauges[metricName]
-		srvstore.GaugeMx.Lock()
+		srvstore.GaugeMx.Unlock()
 		if ok {
 			return fmt.Sprintf("%f", v), http.StatusOK, nil
 		} else {
@@ -92,11 +92,9 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 }
 
 func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
-	split := strings.Split(r.URL.Path, "/")[2:]
-	metricType := split[0]
-	metricName := split[1]
-	metricValue := split[2]
-	statusCode, err := saveMetric(metricType, metricName, metricValue)
+	v := mux.Vars(r)
+	statusCode, err := saveMetric(
+		v["metricType"], v["metricName"], v["metricValue"])
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
 		return
@@ -106,10 +104,8 @@ func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetMericHandler(w http.ResponseWriter, r *http.Request) {
-	split := strings.Split(r.URL.Path, "/")[2:]
-	metricType := split[0]
-	metricName := split[1]
-	value, statusCode, err := getMetric(metricType, metricName)
+	v := mux.Vars(r)
+	value, statusCode, err := getMetric(v["metricType"], v["metricName"])
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
 		return
