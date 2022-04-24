@@ -13,12 +13,13 @@ import (
 
 func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 	defer wg.Done()
+	ticker := time.NewTicker(pollInterval)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("INFO poll received ctx.Done(), returning")
 			return
-		default:
+		case <-ticker.C:
 			log.Println("INFO polling data")
 			var rtm runtime.MemStats
 			runtime.ReadMemStats(&rtm)
@@ -50,7 +51,6 @@ func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 			storage.Agent.SetGauge("TotalAlloc", float64(rtm.TotalAlloc))
 			storage.Agent.SetGauge("RandomValue", rand.Float64())
 			storage.Agent.IncreaseCounter("PollCount", 1)
-			time.Sleep(pollInterval)
 		}
 	}
 }

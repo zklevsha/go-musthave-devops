@@ -57,15 +57,15 @@ func reportCounters(serverSocket string) {
 
 func Report(ctx context.Context, wg *sync.WaitGroup, serverSocket string, reportInterval time.Duration) {
 	defer wg.Done()
+	ticker := time.NewTicker(reportInterval)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("INFO report received ctx.Done(), returning")
 			return
-		default:
+		case <-ticker.C:
 			reportGauges(serverSocket)
 			reportCounters(serverSocket)
-			time.Sleep(reportInterval)
 		}
 	}
 }
