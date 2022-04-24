@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zklevsha/go-musthave-devops/internal/agstore"
+	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
 func send(url string) error {
@@ -32,13 +32,7 @@ func send(url string) error {
 }
 
 func reportGauges(serverSocket string) {
-	agstore.Mutex.Lock()
-	g := make(map[string]float64)
-	for k, v := range agstore.Gauges {
-		g[k] = v
-	}
-	agstore.Mutex.Unlock()
-	for k, v := range g {
+	for k, v := range storage.Agent.GetAllGauges() {
 		err := send(fmt.Sprintf("http://%s/update/%s/%s/%f", serverSocket, "gauge", k, v))
 		if err != nil {
 			log.Printf("ERROR failed to send metic %s(%f): %s\n", k, v, err.Error())
@@ -50,19 +44,13 @@ func reportGauges(serverSocket string) {
 }
 
 func reportCounters(serverSocket string) {
-	agstore.Mutex.Lock()
-	c := make(map[string]int64)
-	for k, v := range agstore.Counters {
-		c[k] = v
-	}
-	agstore.Mutex.Unlock()
-
-	for k, v := range c {
+	for k, v := range storage.Agent.GetAllCounters() {
 		err := send(fmt.Sprintf("http://%s/update/%s/%s/%d", serverSocket, "counter", k, v))
 		if err != nil {
 			log.Printf("ERROR failed to send metic %s(%d): %s\n", k, v, err.Error())
 		} else {
 			log.Printf("INFO metric %s(%d) was sent\n", k, v)
+			storage.Agent.ResetCounter(k)
 		}
 	}
 }

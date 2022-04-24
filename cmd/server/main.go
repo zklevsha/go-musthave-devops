@@ -12,6 +12,7 @@ const serverSocket = ":8080"
 
 func main() {
 	r := mux.NewRouter()
+
 	r.HandleFunc("/update/{metricType}/{metricName}/{metricValue}",
 		handlers.UpdateMeticHandler).Methods("POST")
 	r.HandleFunc("/value/{metricType}/{metricName}",

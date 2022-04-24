@@ -6,29 +6,8 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/zklevsha/go-musthave-devops/internal/srvstore"
+	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
-
-func saveCounter(metricName string, metricValue int64) error {
-
-	if _, ok := srvstore.Counters[metricName]; ok {
-		srvstore.CounterMx.Lock()
-		srvstore.Counters[metricName] += metricValue
-		srvstore.CounterMx.Unlock()
-	} else {
-		srvstore.CounterMx.Lock()
-		srvstore.Counters[metricName] = metricValue
-		srvstore.CounterMx.Unlock()
-	}
-	return nil
-}
-
-func saveGauge(metricName string, metricValue float64) error {
-	srvstore.GaugeMx.Lock()
-	srvstore.Gauges[metricName] = metricValue
-	srvstore.GaugeMx.Unlock()
-	return nil
-}
 
 func saveMetric(metricType string, metricName string, metricValue string) (int, error) {
 	switch metricType {
@@ -38,11 +17,7 @@ func saveMetric(metricType string, metricName string, metricValue string) (int, 
 			msg := fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error())
 			return http.StatusBadRequest, msg
 		}
-		err = saveCounter(metricName, i)
-		if err != nil {
-			e := fmt.Errorf("failed to save %s:  %s", metricName, err.Error())
-			return http.StatusBadRequest, e
-		}
+		storage.Server.IncreaseCounter(metricName, i)
 		return http.StatusOK, nil
 	case "gauge":
 		f, err := strconv.ParseFloat(metricValue, 64)
@@ -50,11 +25,7 @@ func saveMetric(metricType string, metricName string, metricValue string) (int, 
 			e := fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error())
 			return http.StatusBadRequest, e
 		}
-		err = saveGauge(metricName, f)
-		if err != nil {
-			e := fmt.Errorf("failed to save %s:  %s", metricName, err.Error())
-			return http.StatusBadRequest, e
-		}
+		storage.Server.SetGauge(metricName, f)
 		return http.StatusOK, nil
 	default:
 		e := fmt.Errorf("unknown metric type %s", metricType)
@@ -65,24 +36,20 @@ func saveMetric(metricType string, metricName string, metricValue string) (int, 
 func getMetric(metricType string, metricName string) (string, int, error) {
 	switch metricType {
 	case "counter":
-		srvstore.CounterMx.Lock()
-		v, ok := srvstore.Counters[metricName]
-		srvstore.CounterMx.Unlock()
-		if ok {
-			return fmt.Sprintf("%d", v), http.StatusOK, nil
-		} else {
-			e := fmt.Errorf("counter metric %s does not exists", metricName)
+		v, err := storage.Server.GetCounter(metricName)
+		if err != nil {
+			e := fmt.Errorf("failed to get  %s: %s", metricName, err.Error())
 			return "", 404, e
+		} else {
+			return fmt.Sprintf("%d", v), http.StatusOK, nil
 		}
 	case "gauge":
-		srvstore.GaugeMx.Lock()
-		v, ok := srvstore.Gauges[metricName]
-		srvstore.GaugeMx.Unlock()
-		if ok {
-			return fmt.Sprintf("%.3f", v), http.StatusOK, nil
-		} else {
-			e := fmt.Errorf("gauge metric %s does not exists", metricName)
+		v, err := storage.Server.GetGauge(metricName)
+		if err != nil {
+			e := fmt.Errorf("failed to get  %s: %s", metricName, err.Error())
 			return "", 404, e
+		} else {
+			return fmt.Sprintf("%.3f", v), http.StatusOK, nil
 		}
 	default:
 		e := fmt.Errorf("unknown metric type %s", metricType)
