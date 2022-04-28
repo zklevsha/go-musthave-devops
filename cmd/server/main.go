@@ -15,8 +15,18 @@ func main() {
 
 	r.HandleFunc("/update/{metricType}/{metricName}/{metricValue}",
 		handlers.UpdateMeticHandler).Methods("POST")
+
+	r.HandleFunc("/update/", handlers.UpdateMetricJSONHandler).
+		Methods("POST").
+		Headers("Content-Type", "application/json")
+
 	r.HandleFunc("/value/{metricType}/{metricName}",
-		handlers.GetMericHandler).Methods("GET")
+		handlers.GetMetricHandler).Methods("GET")
+
+	r.HandleFunc("/value/", handlers.GetMetricJSONHandler).
+		Methods("POST").
+		Headers("Content-Type", "application/json")
+
 	fmt.Printf("Starting server at %s\n", serverSocket)
 	if err := http.ListenAndServe(serverSocket, r); err != nil {
 		fmt.Println(err.Error())

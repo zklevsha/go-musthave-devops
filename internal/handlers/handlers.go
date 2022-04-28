@@ -3,33 +3,18 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func saveMetric(metricType string, metricName string, metricValue string) (int, error) {
-	switch metricType {
+func updateMetric(m serializer.Metrics) {
+	switch m.MType {
 	case "counter":
-		i, err := strconv.ParseInt(metricValue, 10, 64)
-		if err != nil {
-			msg := fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error())
-			return http.StatusBadRequest, msg
-		}
-		storage.Server.IncreaseCounter(metricName, i)
-		return http.StatusOK, nil
+		storage.Server.IncreaseCounter(m.ID, *m.Delta)
 	case "gauge":
-		f, err := strconv.ParseFloat(metricValue, 64)
-		if err != nil {
-			e := fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error())
-			return http.StatusBadRequest, e
-		}
-		storage.Server.SetGauge(metricName, f)
-		return http.StatusOK, nil
-	default:
-		e := fmt.Errorf("unknown metric type %s", metricType)
-		return http.StatusNotImplemented, e
+		storage.Server.SetGauge(m.ID, *m.Value)
 	}
 }
 
@@ -59,20 +44,43 @@ func getMetric(metricType string, metricName string) (string, int, error) {
 }
 
 func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
+	m, statusCode, err := serializer.DecodeURL(r)
+	if err != nil {
+		http.Error(w, err.Error(), statusCode)
+		return
+	}
+	updateMetric(m)
+	w.Write([]byte("metric was saved"))
+}
+
+func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
+	m, statusCode, err := serializer.DecodeBody(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), statusCode)
+		return
+	}
+	updateMetric(m)
+	w.Write([]byte("metric was saved"))
+}
+
+func GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	v := mux.Vars(r)
-	statusCode, err := saveMetric(
-		v["metricType"], v["metricName"], v["metricValue"])
+	value, statusCode, err := getMetric(v["metricType"], v["metricName"])
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
 		return
 	} else {
-		w.Write([]byte("metric was saved"))
+		w.Write([]byte(value))
 	}
 }
 
-func GetMericHandler(w http.ResponseWriter, r *http.Request) {
-	v := mux.Vars(r)
-	value, statusCode, err := getMetric(v["metricType"], v["metricName"])
+func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
+	m, statusCode, err := serializer.DecodeBody(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), statusCode)
+		return
+	}
+	value, statusCode, err := getMetric(m.MType, m.ID)
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
 		return
