@@ -13,14 +13,14 @@ const serverSocket = ":8080"
 func main() {
 	r := mux.NewRouter()
 
-	r.HandleFunc("/update/{metricType}/{metricName}/{metricValue}",
+	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
 		handlers.UpdateMeticHandler).Methods("POST")
 
 	r.HandleFunc("/update/", handlers.UpdateMetricJSONHandler).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
-	r.HandleFunc("/value/{metricType}/{metricName}",
+	r.HandleFunc("/value/{metricType}/{metricID}",
 		handlers.GetMetricHandler).Methods("GET")
 
 	r.HandleFunc("/value/", handlers.GetMetricJSONHandler).

@@ -33,26 +33,30 @@ func DecodeBody(body io.Reader) (Metrics, int, error) {
 
 func DecodeURL(r *http.Request) (Metrics, int, error) {
 	v := mux.Vars(r)
-	metricName := v["metricName"]
+	metricID := v["metricID"]
 	metricType := v["metricType"]
 	metricValue := v["metricValue"]
+
+	if len(metricValue) == 0 {
+		return Metrics{ID: metricID, MType: metricType}, 200, nil
+	}
 	switch metricType {
 	case "counter":
 		i, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			e := fmt.Errorf("failed to convert %s to int64: %s", metricName, err.Error())
+			e := fmt.Errorf("failed to convert %s (%s) to int64: %s", metricID, metricValue, err.Error())
 			return Metrics{}, http.StatusBadRequest, e
 		} else {
-			m := Metrics{ID: metricName, MType: metricType, Delta: &i}
+			m := Metrics{ID: metricID, MType: metricType, Delta: &i}
 			return m, http.StatusOK, nil
 		}
 	case "gauge":
 		f, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			e := fmt.Errorf("failed to convert %s to float64: %s", metricName, err.Error())
+			e := fmt.Errorf("failed to convert %s (%s) to float64: %s", metricID, metricValue, err.Error())
 			return Metrics{}, http.StatusBadRequest, e
 		} else {
-			m := Metrics{ID: metricName, MType: metricType, Value: &f}
+			m := Metrics{ID: metricID, MType: metricType, Value: &f}
 			return m, http.StatusOK, nil
 		}
 	default:
