@@ -50,27 +50,19 @@ func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	updateMetric(m)
-	w.Header().Set("Content-Type", "application/json")
-	j, err := serializer.EncodeServerResponse("metric was saved", "")
-	if err != nil {
-		panic(err)
-	}
-	w.Write(j)
+	w.Write([]byte("metric was saved"))
 }
 
 func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	m, statusCode, err := serializer.DecodeBody(r.Body)
+	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
-		http.Error(w, err.Error(), statusCode)
-		return
+		msg := string(serializer.EncodeServerResponse("", err.Error()))
+		http.Error(w, msg, statusCode)
+
 	}
 	updateMetric(m)
-	w.Header().Set("Content-Type", "application/json")
-	j, err := serializer.EncodeServerResponse("metric was saved", "")
-	if err != nil {
-		panic(err)
-	}
-	w.Write(j)
+	w.Write(serializer.EncodeServerResponse("metric was saved", ""))
 }
 
 func GetMetricHandler(w http.ResponseWriter, r *http.Request) {

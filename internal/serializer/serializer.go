@@ -77,7 +77,10 @@ func EncodeBodyCounter(id string, value int64) ([]byte, error) {
 	return encode(Metrics{ID: id, MType: "counter", Delta: &value})
 }
 
-func EncodeServerResponse(result string, errorMessage string) ([]byte, error) {
-	return encode(ServerResponse{result, errorMessage})
-
+func EncodeServerResponse(result string, errorMessage string) []byte {
+	j, err := encode(ServerResponse{result, errorMessage})
+	if err != nil {
+		return []byte(fmt.Sprintf(`{"result": %s, "error": %s}`, result, errorMessage))
+	}
+	return j
 }

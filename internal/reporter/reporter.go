@@ -37,15 +37,15 @@ func reportGauges(serverSocket string) {
 	for k, v := range storage.Agent.GetAllGauges() {
 		body, err := serializer.EncodeBodyGauge(k, v)
 		if err != nil {
-			log.Printf("ERROR failed to convert metric %s (%f) to JSON: %s",
-				k, v, err.Error())
+			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
+				k, body, err.Error())
 			continue
 		}
 		err = send(url, body)
 		if err != nil {
-			log.Printf("ERROR failed to send metic %s(%f): %s\n", k, v, err.Error())
+			log.Printf("ERROR failed to send metic %s(%s): %s\n", k, body, err.Error())
 		} else {
-			log.Printf("INFO metric %s(%f) was sent\n", k, v)
+			log.Printf("INFO metric %s(%s) was sent\n", k, body)
 		}
 
 	}
@@ -56,15 +56,15 @@ func reportCounters(serverSocket string) {
 	for k, v := range storage.Agent.GetAllCounters() {
 		body, err := serializer.EncodeBodyCounter(k, v)
 		if err != nil {
-			log.Printf("ERROR failed to convert metric %s (%d) to JSON: %s",
-				k, v, err.Error())
+			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
+				k, body, err.Error())
 			continue
 		}
 		err = send(url, body)
 		if err != nil {
-			log.Printf("ERROR failed to send metic %s(%d): %s\n", k, v, err.Error())
+			log.Printf("ERROR failed to send metic %s(%s): %s\n", k, body, err.Error())
 		} else {
-			log.Printf("INFO metric %s(%d) was sent\n", k, v)
+			log.Printf("INFO metric %s(%s) was sent\n", k, body)
 			storage.Agent.ResetCounter(k)
 		}
 	}
