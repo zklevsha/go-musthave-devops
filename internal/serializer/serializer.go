@@ -17,6 +17,11 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 }
 
+type ServerResponse struct {
+	Result string `json:"result"`
+	Error  string `json:"error"`
+}
+
 func DecodeBody(body io.Reader) (Metrics, int, error) {
 	var m Metrics
 	err := json.NewDecoder(body).Decode(&m)
@@ -56,20 +61,23 @@ func DecodeURL(r *http.Request) (Metrics, int, error) {
 	}
 }
 
-func EncodeBodyGauge(id string, value float64) ([]byte, error) {
-	m := Metrics{ID: id, MType: "gauge", Value: &value}
-	j, err := json.Marshal(m)
+func encode(s interface{}) ([]byte, error) {
+	j, err := json.Marshal(s)
 	if err != nil {
 		return nil, err
 	}
 	return j, nil
 }
 
+func EncodeBodyGauge(id string, value float64) ([]byte, error) {
+	return encode(Metrics{ID: id, MType: "gauge", Value: &value})
+}
+
 func EncodeBodyCounter(id string, value int64) ([]byte, error) {
-	m := Metrics{ID: id, MType: "counter", Delta: &value}
-	j, err := json.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-	return j, nil
+	return encode(Metrics{ID: id, MType: "counter", Delta: &value})
+}
+
+func EncodeServerResponse(result string, errorMessage string) ([]byte, error) {
+	return encode(ServerResponse{result, errorMessage})
+
 }
