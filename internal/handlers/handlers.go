@@ -40,24 +40,6 @@ func getMetric(m serializer.Metrics) (serializer.Metrics, int, error) {
 	return res, http.StatusOK, nil
 }
 
-// func getCounter(metricName string) (int64, int, error) {
-// 	v, err := storage.Server.GetCounter(metricName)
-// 	if err != nil {
-// 		e := fmt.Errorf("failed to get  %s: %s", metricName, err.Error())
-// 		return 0, 404, e
-// 	}
-// 	return v, http.StatusOK, nil
-// }
-
-// func getGauge(metricName string) (float64, int, error) {
-// 	v, err := storage.Server.GetGauge(metricName)
-// 	if err != nil {
-// 		e := fmt.Errorf("failed to get  %s: %s", metricName, err.Error())
-// 		return 0, 404, e
-// 	}
-// 	return v, http.StatusOK, nil
-// }
-
 func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 	m, statusCode, err := serializer.DecodeURL(r)
 	if err != nil {
