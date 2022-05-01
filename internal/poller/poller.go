@@ -50,6 +50,8 @@ func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 			storage.Agent.SetGauge("Sys", float64(rtm.Sys))
 			storage.Agent.SetGauge("TotalAlloc", float64(rtm.TotalAlloc))
 			storage.Agent.SetGauge("RandomValue", rand.Float64())
+			storage.Agent.SetGauge("MSpanInuse", float64(rtm.MSpanInuse))
+			storage.Agent.SetGauge("NumGC", float64(rtm.NumGC))
 			storage.Agent.IncreaseCounter("PollCount", 1)
 		}
 	}
