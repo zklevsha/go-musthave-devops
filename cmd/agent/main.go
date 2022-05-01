@@ -33,7 +33,7 @@ func getAgentConfig() agetnConfig {
 
 	poll := os.Getenv("POLL_INTERVAL")
 	if poll != "" {
-		p, err := time.ParseDuration(poll + "s")
+		p, err := time.ParseDuration(poll)
 		if err != nil {
 			panic(err)
 		}
@@ -42,7 +42,7 @@ func getAgentConfig() agetnConfig {
 
 	report := os.Getenv("REPORT_INTERVAL")
 	if poll != "" {
-		r, err := time.ParseDuration(report + "s")
+		r, err := time.ParseDuration(report)
 		if err != nil {
 			panic(err)
 		}
