@@ -10,11 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func send(url string) error {
-	resp, err := http.Post(url, "text/plain", bytes.NewBufferString(""))
+func send(url string, body []byte) error {
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("an error occured %v", err)
 
@@ -32,24 +33,38 @@ func send(url string) error {
 }
 
 func reportGauges(serverSocket string) {
+	url := fmt.Sprintf("http://%s/update/", serverSocket)
 	for k, v := range storage.Agent.GetAllGauges() {
-		err := send(fmt.Sprintf("http://%s/update/%s/%s/%f", serverSocket, "gauge", k, v))
+		body, err := serializer.EncodeBodyGauge(k, v)
 		if err != nil {
-			log.Printf("ERROR failed to send metic %s(%f): %s\n", k, v, err.Error())
+			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
+				k, body, err.Error())
+			continue
+		}
+		err = send(url, body)
+		if err != nil {
+			log.Printf("ERROR failed to send metic %s(%s): %s\n", k, body, err.Error())
 		} else {
-			log.Printf("INFO metric %s(%f) was sent\n", k, v)
+			log.Printf("INFO metric %s(%s) was sent\n", k, body)
 		}
 
 	}
 }
 
 func reportCounters(serverSocket string) {
+	url := fmt.Sprintf("http://%s/update/", serverSocket)
 	for k, v := range storage.Agent.GetAllCounters() {
-		err := send(fmt.Sprintf("http://%s/update/%s/%s/%d", serverSocket, "counter", k, v))
+		body, err := serializer.EncodeBodyCounter(k, v)
 		if err != nil {
-			log.Printf("ERROR failed to send metic %s(%d): %s\n", k, v, err.Error())
+			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
+				k, body, err.Error())
+			continue
+		}
+		err = send(url, body)
+		if err != nil {
+			log.Printf("ERROR failed to send metic %s(%s): %s\n", k, body, err.Error())
 		} else {
-			log.Printf("INFO metric %s(%d) was sent\n", k, v)
+			log.Printf("INFO metric %s(%s) was sent\n", k, body)
 			storage.Agent.ResetCounter(k)
 		}
 	}
