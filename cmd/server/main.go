@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
+	muxHandler "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 )
@@ -28,7 +30,9 @@ func main() {
 		Headers("Content-Type", "application/json")
 
 	fmt.Printf("Starting server at %s\n", serverSocket)
-	if err := http.ListenAndServe(serverSocket, r); err != nil {
+
+	loggedRouter := muxHandler.LoggingHandler(os.Stdout, r)
+	if err := http.ListenAndServe(serverSocket, loggedRouter); err != nil {
 		fmt.Println(err.Error())
 	}
 }
