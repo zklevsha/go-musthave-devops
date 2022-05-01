@@ -10,9 +10,26 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 )
 
-const serverSocket = ":8080"
+const serverAddressDefault = "localhost:8080"
+
+type agetnConfig struct {
+	serverAddress string
+}
+
+func getServerConfig() agetnConfig {
+	c := agetnConfig{
+		serverAddress: serverAddressDefault}
+
+	address := os.Getenv("ADDRESS")
+	if address != "" {
+		c.serverAddress = address
+	}
+	return c
+
+}
 
 func main() {
+	config := getServerConfig()
 	r := mux.NewRouter()
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
@@ -29,10 +46,10 @@ func main() {
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
-	fmt.Printf("Starting server at %s\n", serverSocket)
+	fmt.Printf("Starting server at %s\n", config.serverAddress)
 
 	loggedRouter := muxHandler.LoggingHandler(os.Stdout, r)
-	if err := http.ListenAndServe(serverSocket, loggedRouter); err != nil {
+	if err := http.ListenAndServe(config.serverAddress, loggedRouter); err != nil {
 		fmt.Println(err.Error())
 	}
 }
