@@ -13,19 +13,58 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/reporter"
 )
 
-const pollInterval = time.Duration(2 * time.Second)
-const reportInterval = time.Duration(10 * time.Second)
-const serverSocket = "127.0.0.1:8080"
+const pollIntervalDefault = time.Duration(2 * time.Second)
+const reportIntervalDefault = time.Duration(10 * time.Second)
+const serverAddressDefault = "127.0.0.1:8080"
 
 var wg sync.WaitGroup
 
+type agetnConfig struct {
+	pollInterval   time.Duration
+	reportInterval time.Duration
+	serverAddress  string
+}
+
+func getAgentConfig() agetnConfig {
+	c := agetnConfig{
+		pollInterval:   pollIntervalDefault,
+		reportInterval: reportIntervalDefault,
+		serverAddress:  serverAddressDefault}
+
+	poll := os.Getenv("POLL_INTERVAL")
+	if poll != "" {
+		p, err := time.ParseDuration(poll)
+		if err != nil {
+			panic(err)
+		}
+		c.pollInterval = p
+	}
+
+	report := os.Getenv("REPORT_INTERVAL")
+	if poll != "" {
+		r, err := time.ParseDuration(report)
+		if err != nil {
+			panic(err)
+		}
+		c.reportInterval = r
+	}
+
+	address := os.Getenv("ADDRESS")
+	if address != "" {
+		c.serverAddress = address
+	}
+	return c
+
+}
+
 func main() {
+	agentConfig := getAgentConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	wg.Add(2)
-	go poller.Poll(ctx, &wg, pollInterval)
-	go reporter.Report(ctx, &wg, serverSocket, reportInterval)
+	go poller.Poll(ctx, &wg, agentConfig.pollInterval)
+	go reporter.Report(ctx, &wg, agentConfig.serverAddress, agentConfig.reportInterval)
 	sig := <-c
 	log.Printf("INFO main got a signal '%v', start shutting down...\n", sig)
 	cancel()
