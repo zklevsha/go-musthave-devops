@@ -76,6 +76,12 @@ func (s *MemoryStorage) ResetCounter(metricName string) error {
 
 }
 
+func (s *MemoryStorage) SetCounter(metricName string, metricValue int64) {
+	s.countersMx.Lock()
+	s.counters[metricName] = metricValue
+	s.countersMx.Unlock()
+}
+
 func (s *MemoryStorage) GetAllCounters() map[string]int64 {
 	c := make(map[string]int64)
 	s.countersMx.RLock()
@@ -101,6 +107,7 @@ type Storage interface {
 	SetGauge(metricName string, metricValue float64)
 	GetAllGauges() map[string]float64
 	GetCounter(metricName string) (int64, error)
+	SetCounter(metricName string, metricValue int64)
 	IncreaseCounter(metricName string, metricValue int64)
 	GetAllCounters() map[string]int64
 	ResetCounter(metricName string) error

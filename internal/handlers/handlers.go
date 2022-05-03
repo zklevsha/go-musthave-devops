@@ -3,13 +3,15 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func updateMetric(m serializer.Metrics) {
+func updateMetric(m serializer.Metric) {
 	switch m.MType {
 	case "counter":
 		storage.Server.IncreaseCounter(m.ID, *m.Delta)
@@ -18,8 +20,8 @@ func updateMetric(m serializer.Metrics) {
 	}
 }
 
-func getMetric(m serializer.Metrics) (serializer.Metrics, int, error) {
-	res := serializer.Metrics{ID: m.ID, MType: m.MType}
+func getMetric(m serializer.Metric) (serializer.Metric, int, error) {
+	res := serializer.Metric{ID: m.ID, MType: m.MType}
 	switch m.MType {
 	case "counter":
 		v, err := storage.Server.GetCounter(m.ID)
@@ -58,6 +60,7 @@ func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(serializer.EncodeServerResponse("", err.Error()))
 		return
 	}
+	log.Printf("INFO UpdateMetricJSONHandler metric: %+v\n", m)
 	updateMetric(m)
 	w.Write(serializer.EncodeServerResponse("metric was saved", ""))
 }
@@ -89,6 +92,7 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
+	log.Printf("GetMetricJSONHandler metric: %+v\n", m)
 
 	result, statusCode, err := getMetric(m)
 	if err != nil {
@@ -98,4 +102,24 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(result)
 
+}
+
+func GetHandler() http.Handler {
+	r := mux.NewRouter()
+
+	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
+		UpdateMeticHandler).Methods("POST")
+
+	r.HandleFunc("/update/", UpdateMetricJSONHandler).
+		Methods("POST").
+		Headers("Content-Type", "application/json")
+
+	r.HandleFunc("/value/{metricType}/{metricID}",
+		GetMetricHandler).Methods("GET")
+
+	r.HandleFunc("/value/", GetMetricJSONHandler).
+		Methods("POST").
+		Headers("Content-Type", "application/json")
+
+	return r
 }
