@@ -83,7 +83,7 @@ func main() {
 	fmt.Printf("Starting web server at %s\n", config.serverAddress)
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    config.serverAddress,
 		Handler: handler,
 	}
 
