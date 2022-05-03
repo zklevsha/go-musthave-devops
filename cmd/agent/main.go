@@ -35,7 +35,8 @@ func getAgentConfig() agetnConfig {
 	if poll != "" {
 		p, err := time.ParseDuration(poll)
 		if err != nil {
-			panic(err)
+			log.Printf("WARN main failed to parse env var POLL_INTERVAL=%s: %s. Default will be used (%v)",
+				poll, err.Error(), c.pollInterval)
 		}
 		c.pollInterval = p
 	}

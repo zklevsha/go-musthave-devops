@@ -45,9 +45,10 @@ func getServerConfig() serverConfig {
 
 	s = os.Getenv("STORE_INTERVAL")
 	if s != "" {
-		storeInterval, err := time.ParseDuration(s + "s")
+		storeInterval, err := time.ParseDuration(s)
 		if err != nil {
-			panic(err)
+			log.Printf("WARN web failed to parse env var STORE_INTERVAL=%s: %s. Using default (%v)",
+				s, err.Error(), c.storeInterval)
 		}
 		c.storeInterval = storeInterval
 	}
@@ -61,9 +62,11 @@ func getServerConfig() serverConfig {
 	if s != "" {
 		restore, err := strconv.ParseBool(s)
 		if err != nil {
-			panic(err)
+			log.Printf("WARN web failed to parse env var RESTORE=%s: %s. Using default (%t)",
+				s, err.Error(), c.restore)
+		} else {
+			c.restore = restore
 		}
-		c.restore = restore
 	}
 
 	return c
