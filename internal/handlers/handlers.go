@@ -3,10 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 
-	muxHandler "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
@@ -61,6 +60,7 @@ func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(serializer.EncodeServerResponse("", err.Error()))
 		return
 	}
+	log.Printf("INFO UpdateMetricJSONHandler metric: %+v\n", m)
 	updateMetric(m)
 	w.Write(serializer.EncodeServerResponse("metric was saved", ""))
 }
@@ -92,6 +92,7 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
+	log.Printf("GetMetricJSONHandler metric: %+v\n", m)
 
 	result, statusCode, err := getMetric(m)
 	if err != nil {
@@ -120,5 +121,5 @@ func GetHandler() http.Handler {
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
-	return muxHandler.LoggingHandler(os.Stdout, r)
+	return r
 }

@@ -78,7 +78,7 @@ func restoreData(storeFile string) {
 	if err != nil {
 		log.Printf("ERROR dump failed to restore data: %s\n", err.Error())
 	} else {
-		log.Printf("INFO dump successfully saved data (%s)", storeFile)
+		log.Printf("INFO dump successfully restored data (%s)", storeFile)
 	}
 }
 
