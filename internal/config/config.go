@@ -5,17 +5,28 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
 const pollIntervalDefault = time.Duration(2 * time.Second)
 const reportIntervalDefault = time.Duration(10 * time.Second)
 const serverAddressDefault = "127.0.0.1:8080"
+const storeIntervalDefault = time.Duration(300 * time.Second)
+const storeFileDefault = "/tmp/devops-metrics-db.json"
+const restoreDefault = true
 
 type AgentConfig struct {
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	ServerAddress  string
+}
+
+type ServerConfig struct {
+	ServerAddress string
+	StoreInterval time.Duration
+	StoreFile     string
+	Restore       bool
 }
 
 func parseInterval(env string, flag string) (time.Duration, error) {
@@ -58,10 +69,13 @@ func parseInterval(env string, flag string) (time.Duration, error) {
 func GetAgentConfig() AgentConfig {
 	var config AgentConfig
 
-	var aFlag, rFlag, pFlag string
-	flag.StringVar(&aFlag, "a", "", "server socket (default: 127.0.0.1:8080)")
-	flag.StringVar(&rFlag, "r", "", "report interval (default: 10s)")
-	flag.StringVar(&pFlag, "p", "", "poll interval (default: 2s)")
+	var addressF, reportF, pollF string
+	flag.StringVar(&addressF, "a", serverAddressDefault,
+		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
+	flag.StringVar(&reportF, "r", reportIntervalDefault.String(),
+		fmt.Sprintf("report interval (default: %s)", reportIntervalDefault))
+	flag.StringVar(&pollF, "p", pollIntervalDefault.String(),
+		fmt.Sprintf("poll interval (default: %s)", pollIntervalDefault))
 	flag.Parse()
 
 	pollEnv := os.Getenv("POLL_INTERVAL")
@@ -69,41 +83,90 @@ func GetAgentConfig() AgentConfig {
 	addressEnv := os.Getenv("ADDRESS")
 
 	// pollInterval
-	if pollEnv != "" || pFlag != "" {
-		pollInterval, err := parseInterval(pollEnv, pFlag)
-		if err != nil {
-			log.Printf("WARN cant parse pollInterval (env:%s, flag: %s): %s. Default value will be used (%s)",
-				pollEnv, pFlag, err.Error(), pollIntervalDefault)
-			config.PollInterval = pollIntervalDefault
-		} else {
-			config.PollInterval = pollInterval
-		}
-	} else {
+	pollInterval, err := parseInterval(pollEnv, pollF)
+	if err != nil {
+		log.Printf("WARN cant parse pollInterval (env:%s, flag: %s): %s. Default value will be used (%s)",
+			pollEnv, pollF, err.Error(), pollIntervalDefault)
 		config.PollInterval = pollIntervalDefault
+	} else {
+		config.PollInterval = pollInterval
 	}
 
 	// reportInterval
-	if reportEnv != "" || rFlag != "" {
-		reportInterval, err := parseInterval(reportEnv, rFlag)
-		if err != nil {
-			log.Printf("WARN cant parse reportInterval (env:%s, flag: %s): %s. Default value will be used (%s)",
-				reportEnv, rFlag, err.Error(), reportIntervalDefault)
-			config.ReportInterval = reportIntervalDefault
-		} else {
-			config.ReportInterval = reportInterval
-		}
-	} else {
+	reportInterval, err := parseInterval(reportEnv, reportF)
+	if err != nil {
+		log.Printf("WARN can`t parse reportInterval (env:%s, flag: %s): %s. Default value will be used (%s)",
+			reportEnv, reportF, err.Error(), reportIntervalDefault)
 		config.ReportInterval = reportIntervalDefault
+	} else {
+		config.ReportInterval = reportInterval
 	}
 
 	// address
 	if addressEnv != "" {
 		config.ServerAddress = addressEnv
-	} else if aFlag != "" {
-		config.ServerAddress = aFlag
 	} else {
-		config.ServerAddress = serverAddressDefault
+		config.ServerAddress = addressF
 	}
 
 	return config
+}
+
+func GetServerConfig() ServerConfig {
+	var config ServerConfig
+	var addressF, sIntervalF, sFIleF string
+	var restoreF bool
+
+	flag.StringVar(&addressF, "a", serverAddressDefault,
+		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
+	flag.StringVar(&sIntervalF, "i", storeIntervalDefault.String(),
+		fmt.Sprintf("store interval (default: %s)", storeIntervalDefault))
+	flag.StringVar(&sFIleF, "f", storeFileDefault,
+		fmt.Sprintf("store file (default: %s)", storeFileDefault))
+	flag.BoolVar(&restoreF, "r", restoreDefault, "restore from file at start")
+	flag.Parse()
+
+	addressEnv := os.Getenv("ADDRESS")
+	sIntervalEnv := os.Getenv("STORE_INTERVAL")
+	sFileEnv := os.Getenv("STORE_FILE")
+	restoreEnv := os.Getenv("RESTORE")
+
+	// address
+	if addressEnv != "" {
+		config.ServerAddress = addressEnv
+	} else {
+		config.ServerAddress = addressF
+	}
+
+	// storeFile
+	if sFileEnv != "" {
+		config.StoreFile = sFileEnv
+	} else {
+		config.StoreFile = sFIleF
+	}
+
+	// restore
+	if restoreEnv != "" {
+		restore, err := strconv.ParseBool(restoreEnv)
+		if err != nil {
+			log.Printf("WARN failed to get `restore` value from env var (%s): %s", restoreEnv, err.Error())
+			config.Restore = restoreF
+		} else {
+			config.Restore = restore
+		}
+	} else {
+		config.Restore = restoreF
+	}
+
+	// storeInterval
+	sInterval, err := parseInterval(sIntervalEnv, sIntervalF)
+	if err != nil {
+		log.Printf("WARN can`t parse storeInterval (env:%s, flag: %s): %s. Default value will be used (%s)",
+			sIntervalEnv, sIntervalF, err.Error(), storeIntervalDefault)
+		config.StoreInterval = storeIntervalDefault
+	} else {
+		config.StoreInterval = sInterval
+	}
+	return config
+
 }
