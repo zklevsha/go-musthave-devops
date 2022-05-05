@@ -146,9 +146,8 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func GetMeticCompressedNHandler(w http.ResponseWriter, r *http.Request) {
+func GetMeticCompressedHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Content-Encoding", "gzip")
 
 	compressed, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -184,14 +183,7 @@ func GetMeticCompressedNHandler(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, false)
 		return
 	}
-
-	compressed, err = archive.Compress(j)
-	if err != nil {
-		e := fmt.Sprintf("failed to compress response: %s", err.Error())
-		sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, false)
-		return
-	}
-	w.Write(compressed)
+	w.Write(j)
 
 }
 
@@ -213,7 +205,7 @@ func GetHandler() http.Handler {
 	r.HandleFunc("/value/{metricType}/{metricID}",
 		GetMetricHandler).Methods("GET")
 
-	r.HandleFunc("/value/", GetMeticCompressedNHandler).
+	r.HandleFunc("/value/", GetMeticCompressedHandler).
 		Methods("POST").
 		Headers("Content-Type", "application/json").
 		Headers("Accept-Encoding", "gzip")
