@@ -7,86 +7,37 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
-	"time"
 
+	"github.com/zklevsha/go-musthave-devops/internal/config"
 	"github.com/zklevsha/go-musthave-devops/internal/dumper"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 )
 
-const serverAddressDefault = "localhost:8080"
-const storeIntervalDefault = time.Duration(300 * time.Second)
-const storeFileDefault = "/tmp/devops-metrics-db.json"
-const restoreDefault = true
-
 var wg sync.WaitGroup
 
-type serverConfig struct {
-	serverAddress string
-	storeInterval time.Duration
-	storeFile     string
-	restore       bool
-}
-
-func getServerConfig() serverConfig {
-	c := serverConfig{
-		serverAddress: serverAddressDefault,
-		storeInterval: storeIntervalDefault,
-		storeFile:     storeFileDefault,
-		restore:       restoreDefault,
-	}
-
-	s := os.Getenv("ADDRESS")
-	if s != "" {
-		c.serverAddress = s
-	}
-
-	s = os.Getenv("STORE_INTERVAL")
-	if s != "" {
-		storeInterval, err := time.ParseDuration(s)
-		if err != nil {
-			log.Printf("WARN web failed to parse env var STORE_INTERVAL=%s: %s. Using default (%v)",
-				s, err.Error(), c.storeInterval)
-		}
-		c.storeInterval = storeInterval
-	}
-
-	s = os.Getenv("STORE_FILE")
-	if s != "" {
-		c.storeFile = s
-	}
-
-	s = os.Getenv("RESTORE")
-	if s != "" {
-		restore, err := strconv.ParseBool(s)
-		if err != nil {
-			log.Printf("WARN web failed to parse env var RESTORE=%s: %s. Using default (%t)",
-				s, err.Error(), c.restore)
-		} else {
-			c.restore = restore
-		}
-	}
-
-	return c
-
-}
-
 func main() {
-	config := getServerConfig()
+	log.Println("INFO main starting server")
+	config := config.GetServerConfig()
+	log.Printf("INFO main server config: ServerAddress: %s, StoreInterval: %s, StoreFile: %s, Restore: %t",
+		config.ServerAddress, config.StoreInterval, config.StoreFile, config.Restore)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Init dumper
+	if config.Restore {
+		dumper.RestoreData(config.StoreFile)
+	}
+
+	// Starting dumper
 	wg.Add(1)
-	go dumper.Start(ctx, &wg, config.storeInterval, config.storeFile, config.restore)
+	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
 
 	// Starting web server
 	handler := handlers.GetHandler()
-	fmt.Printf("Starting web server at %s\n", config.serverAddress)
+	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{
-		Addr:    config.serverAddress,
+		Addr:    config.ServerAddress,
 		Handler: handler,
 	}
 

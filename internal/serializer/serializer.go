@@ -82,7 +82,3 @@ func EncodeServerResponse(result string, errorMessage string) []byte {
 	}
 	return j
 }
-
-func EncodeMetrics(m Metrics) ([]byte, error) {
-	return json.MarshalIndent(m, "", " ")
-}
