@@ -205,10 +205,10 @@ func GetHandler() http.Handler {
 	r.HandleFunc("/value/{metricType}/{metricID}",
 		GetMetricHandler).Methods("GET")
 
-	r.HandleFunc("/value/", GetMeticCompressedHandler).
-		Methods("POST").
-		Headers("Content-Type", "application/json").
-		Headers("Accept-Encoding", "gzip")
+	// r.HandleFunc("/value/", GetMeticCompressedHandler).
+	// 	Methods("POST").
+	// 	Headers("Content-Type", "application/json").
+	// 	Headers("Accept-Encoding", "gzip")
 
 	r.HandleFunc("/value/", GetMetricJSONHandler).
 		Methods("POST").
