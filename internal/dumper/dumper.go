@@ -14,15 +14,19 @@ import (
 )
 
 func encodeMetrics() ([]byte, error) {
-	m := serializer.Metrics{}
-	for k, v := range storage.Server.GetAllCounters() {
-		m = append(m, serializer.Metric{ID: k, MType: "counter", Delta: &v})
+	metrics := serializer.Metrics{}
+	counters := storage.Server.GetAllCounters()
+	gauges := storage.Server.GetAllGauges()
+	for k := range counters {
+		d := counters[k]
+		metrics = append(metrics, serializer.Metric{ID: k, Delta: &d, MType: "counter"})
 	}
-	for k, v := range storage.Server.GetAllGauges() {
-		m = append(m, serializer.Metric{ID: k, MType: "gauge", Value: &v})
+	for k := range gauges {
+		v := gauges[k]
+		metrics = append(metrics, serializer.Metric{ID: k, MType: "gauge", Value: &v})
 	}
 
-	json, err := serializer.EncodeMetrics(m)
+	json, err := json.Marshal(metrics)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -53,11 +57,12 @@ func restore(filePath string) error {
 		return fmt.Errorf("failed to unmarshall json to serializer.Metrics: %s", err.Error())
 	}
 	for _, m := range metrics {
-		log.Printf("INFO dump restoring %+v\n", m)
 		if m.MType == "gauge" {
 			storage.Server.SetGauge(m.ID, *m.Value)
 		} else if m.MType == "counter" {
 			storage.Server.SetCounter(m.ID, *m.Delta)
+		} else {
+			log.Printf("WARN Failed to restore %+v: unknown metric type", m)
 		}
 	}
 	return nil

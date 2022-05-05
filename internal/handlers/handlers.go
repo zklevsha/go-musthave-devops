@@ -60,7 +60,15 @@ func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(serializer.EncodeServerResponse("", err.Error()))
 		return
 	}
-	log.Printf("INFO UpdateMetricJSONHandler metric: %+v\n", m)
+	if m.MType == "gauge" {
+		log.Printf("INFO UpdateMetricJSONHandler metric: id:%s, type:gauge, value:%f \n",
+			m.ID, *m.Value)
+	} else if m.MType == "counter" {
+		log.Printf("INFO UpdateMetricJSONHandler metric: id:%s, type:counter, delta:%d \n",
+			m.ID, *m.Delta)
+	} else {
+		log.Printf("INFO UpdateMetricJSONHandler metric: %+v", m)
+	}
 	updateMetric(m)
 	w.Write(serializer.EncodeServerResponse("metric was saved", ""))
 }
