@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/zklevsha/go-musthave-devops/internal/archive"
 )
 
 type Metric struct {
@@ -24,13 +25,13 @@ type ServerResponse struct {
 	Error  string `json:"error"`
 }
 
-func DecodeBody(body io.Reader) (Metric, int, error) {
+func DecodeBody(body io.Reader) (Metric, error) {
 	var m Metric
 	err := json.NewDecoder(body).Decode(&m)
 	if err != nil {
-		return Metric{}, http.StatusBadRequest, err
+		return Metric{}, err
 	}
-	return m, http.StatusOK, nil
+	return m, err
 }
 
 func DecodeURL(r *http.Request) (Metric, int, error) {
@@ -75,10 +76,18 @@ func EncodeBodyCounter(id string, value int64) ([]byte, error) {
 	return json.Marshal(Metric{ID: id, MType: "counter", Delta: &value})
 }
 
-func EncodeServerResponse(result string, errorMessage string) []byte {
-	j, err := json.Marshal(ServerResponse{result, errorMessage})
+func EncodeServerResponse(resp ServerResponse, compress bool) ([]byte, error) {
+	j, err := json.Marshal(resp)
 	if err != nil {
-		return []byte(fmt.Sprintf(`{"result": %s, "error": %s}`, result, errorMessage))
+		return nil, fmt.Errorf("failed to encode server response: %s", err.Error())
 	}
-	return j
+	if !compress {
+		return j, nil
+	}
+
+	compressed, err := archive.Compress(j)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compress server response %s", err.Error())
+	}
+	return compressed, nil
 }
