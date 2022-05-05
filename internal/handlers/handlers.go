@@ -216,7 +216,7 @@ func GetHandler() http.Handler {
 	r.HandleFunc("/value/", GetMeticCompressedHandler).
 		Methods("POST").
 		Headers("Content-Type", "application/json",
-			"Content-Encoding", "gzip")
+			"Accept-Encoding", "gzip")
 
 	r.HandleFunc("/value/", GetMetricJSONHandler).
 		Methods("POST").
