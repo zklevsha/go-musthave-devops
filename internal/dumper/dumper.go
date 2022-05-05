@@ -34,6 +34,7 @@ func dump(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to convert metrics to json: %s", err.Error())
 	}
+	log.Printf("INFO dump file content:\n %s\n", encodedMetrics)
 	err = ioutil.WriteFile(filePath, encodedMetrics, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to dump metric to file %s: %s", filePath, err.Error())
@@ -52,6 +53,7 @@ func restore(filePath string) error {
 		return fmt.Errorf("failed to unmarshall json to serializer.Metrics: %s", err.Error())
 	}
 	for _, m := range metrics {
+		log.Printf("INFO dump restoring %+v\n", m)
 		if m.MType == "gauge" {
 			storage.Server.SetGauge(m.ID, *m.Value)
 		} else if m.MType == "counter" {
@@ -72,7 +74,7 @@ func dumpData(storeFile string) {
 
 }
 
-func restoreData(storeFile string) {
+func RestoreData(storeFile string) {
 	log.Println("INFO dump restore data from disk")
 	err := restore(storeFile)
 	if err != nil {
@@ -82,16 +84,14 @@ func restoreData(storeFile string) {
 	}
 }
 
-func Start(ctx context.Context, wg *sync.WaitGroup, storeInterval time.Duration, storeFile string, restore bool) {
+func Start(ctx context.Context, wg *sync.WaitGroup, storeInterval time.Duration, storeFile string) {
+	log.Println("INFO dump starting")
 	defer wg.Done()
-	if restore {
-		restoreData(storeFile)
-	}
 	ticker := time.NewTicker(storeInterval)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("INFO dumper received ctx.Done()'. Dumping and exiting")
+			log.Println("INFO dump received ctx.Done()'. Dumping and exiting")
 			dumpData(storeFile)
 			return
 		case <-ticker.C:

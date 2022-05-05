@@ -24,9 +24,13 @@ func main() {
 		config.ServerAddress, config.StoreInterval, config.StoreFile, config.Restore)
 	ctx, cancel := context.WithCancel(context.Background())
 
+	if config.Restore {
+		dumper.RestoreData(config.StoreFile)
+	}
+
 	// Starting dumper
 	wg.Add(1)
-	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile, config.Restore)
+	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
 
 	// Starting web server
 	handler := handlers.GetHandler()
