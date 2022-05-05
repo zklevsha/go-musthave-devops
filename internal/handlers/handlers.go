@@ -127,6 +127,7 @@ func GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetMetricJSONHandler: request header %+v", r.Header)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	m, err := serializer.DecodeBody(r.Body)
 	if err != nil {
@@ -147,6 +148,7 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetMeticCompressedHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GetMeticCompressedHandler: request header %+v", r.Header)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Encoding", "gzip")
 
@@ -169,7 +171,6 @@ func GetMeticCompressedHandler(w http.ResponseWriter, r *http.Request) {
 		sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, true)
 		return
 	}
-	log.Printf("GetMetricJSONHandler metric: %+v\n", m)
 
 	metric, statusCode, err := getMetric(m)
 	if err != nil {
@@ -215,8 +216,7 @@ func GetHandler() http.Handler {
 
 	r.HandleFunc("/value/", GetMeticCompressedHandler).
 		Methods("POST").
-		Headers("Content-Type", "application/json").
-		Headers("Accept-Encoding", "gzip")
+		Headers("Content-Type", "application/json", "Content-Encoding", "gzip", "Accept-Encoding", "gzip")
 
 	r.HandleFunc("/value/", GetMetricJSONHandler).
 		Methods("POST").
