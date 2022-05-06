@@ -187,8 +187,21 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func rootHandrer(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	response, err := serializer.EncodeMetrics()
+	if err != nil {
+		e := fmt.Sprintf("failed to convert encode metrics to json: %s", err.Error())
+		sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, false)
+		return
+	}
+	w.Write(response)
+}
+
 func GetHandler() http.Handler {
 	r := mux.NewRouter()
+
+	r.HandleFunc("/", rootHandrer)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
 		UpdateMeticHandler).Methods("POST")

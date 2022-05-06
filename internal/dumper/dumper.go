@@ -13,28 +13,8 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func encodeMetrics() ([]byte, error) {
-	metrics := serializer.Metrics{}
-	counters := storage.Server.GetAllCounters()
-	gauges := storage.Server.GetAllGauges()
-	for k := range counters {
-		d := counters[k]
-		metrics = append(metrics, serializer.Metric{ID: k, Delta: &d, MType: "counter"})
-	}
-	for k := range gauges {
-		v := gauges[k]
-		metrics = append(metrics, serializer.Metric{ID: k, MType: "gauge", Value: &v})
-	}
-
-	json, err := json.Marshal(metrics)
-	if err != nil {
-		return []byte{}, err
-	}
-	return json, nil
-}
-
 func dump(filePath string) error {
-	encodedMetrics, err := encodeMetrics()
+	encodedMetrics, err := serializer.EncodeMetrics()
 	if err != nil {
 		return fmt.Errorf("failed to convert metrics to json: %s", err.Error())
 	}

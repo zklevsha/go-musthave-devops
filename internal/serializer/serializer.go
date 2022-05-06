@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
+	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
 type Metric struct {
@@ -90,4 +91,24 @@ func EncodeServerResponse(resp ServerResponse, compress bool) ([]byte, error) {
 		return nil, fmt.Errorf("failed to compress server response %s", err.Error())
 	}
 	return compressed, nil
+}
+
+func EncodeMetrics() ([]byte, error) {
+	metrics := Metrics{}
+	counters := storage.Server.GetAllCounters()
+	gauges := storage.Server.GetAllGauges()
+	for k := range counters {
+		d := counters[k]
+		metrics = append(metrics, Metric{ID: k, Delta: &d, MType: "counter"})
+	}
+	for k := range gauges {
+		v := gauges[k]
+		metrics = append(metrics, Metric{ID: k, MType: "gauge", Value: &v})
+	}
+
+	json, err := json.Marshal(metrics)
+	if err != nil {
+		return []byte{}, err
+	}
+	return json, nil
 }
