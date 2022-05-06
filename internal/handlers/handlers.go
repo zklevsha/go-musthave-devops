@@ -189,7 +189,22 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 
 func rootHandrer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, "Server is working")
+	var err error
+	compressResponse :=
+		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+
+	resp := []byte("<html><body><h1>Server is wokring</h1></body></html>")
+	if compressResponse {
+		resp, err = archive.Compress(resp)
+		if err != nil {
+			e := fmt.Sprintf("failed to compress response: %s", err.Error())
+			sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, compressResponse)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+
+	}
+	w.Write(resp)
 }
 
 func GetHandler() http.Handler {
