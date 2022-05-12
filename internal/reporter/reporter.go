@@ -10,12 +10,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/zklevsha/go-musthave-devops/internal/archive"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
 func send(url string, body []byte) error {
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+	client := &http.Client{}
+
+	compressed, err := archive.Compress(body)
+	if err != nil {
+		return fmt.Errorf("failed to compress request body: %s", err.Error())
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(compressed))
+	if err != nil {
+		return fmt.Errorf("failed to create http.NewRequest : %s", err.Error())
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Encoding", "gzip")
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("an error occured %v", err)
 
