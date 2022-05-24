@@ -13,6 +13,7 @@ import (
 
 // TestUpdateMeticHandler
 func TestUpdateMeticHandler(t *testing.T) {
+	h := handlers.Handlers{}
 	type want struct {
 		code     int
 		response string
@@ -67,7 +68,7 @@ func TestUpdateMeticHandler(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 			router := mux.NewRouter()
-			router.HandleFunc("/update/{metricType}/{metricName}/{metricValue}", handlers.UpdateMeticHandler)
+			router.HandleFunc("/update/{metricType}/{metricName}/{metricValue}", h.UpdateMeticHandler)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 

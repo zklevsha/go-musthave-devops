@@ -33,7 +33,7 @@ func main() {
 	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
 
 	// Starting web server
-	handler := handlers.GetHandler()
+	handler := handlers.GetHandler(config.Key)
 	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{

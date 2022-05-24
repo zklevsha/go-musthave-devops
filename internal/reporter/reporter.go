@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
+	"github.com/zklevsha/go-musthave-devops/internal/config"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
@@ -47,10 +48,10 @@ func send(url string, body []byte) error {
 	return nil
 }
 
-func reportGauges(serverSocket string) {
+func reportGauges(serverSocket string, key string) {
 	url := fmt.Sprintf("http://%s/update/", serverSocket)
 	for k, v := range storage.Agent.GetAllGauges() {
-		body, err := serializer.EncodeBodyGauge(k, v)
+		body, err := serializer.EncodeBodyGauge(k, v, key)
 		if err != nil {
 			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
 				k, body, err.Error())
@@ -66,10 +67,10 @@ func reportGauges(serverSocket string) {
 	}
 }
 
-func reportCounters(serverSocket string) {
+func reportCounters(serverSocket string, key string) {
 	url := fmt.Sprintf("http://%s/update/", serverSocket)
 	for k, v := range storage.Agent.GetAllCounters() {
-		body, err := serializer.EncodeBodyCounter(k, v)
+		body, err := serializer.EncodeBodyCounter(k, v, key)
 		if err != nil {
 			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
 				k, body, err.Error())
@@ -85,17 +86,17 @@ func reportCounters(serverSocket string) {
 	}
 }
 
-func Report(ctx context.Context, wg *sync.WaitGroup, serverSocket string, reportInterval time.Duration) {
+func Report(ctx context.Context, wg *sync.WaitGroup, conf config.AgentConfig) {
 	defer wg.Done()
-	ticker := time.NewTicker(reportInterval)
+	ticker := time.NewTicker(conf.ReportInterval)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("INFO report received ctx.Done(), returning")
 			return
 		case <-ticker.C:
-			reportGauges(serverSocket)
-			reportCounters(serverSocket)
+			reportGauges(conf.ServerAddress, conf.Key)
+			reportCounters(conf.ServerAddress, conf.Key)
 		}
 	}
 }
