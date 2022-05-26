@@ -10,6 +10,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
+	"github.com/zklevsha/go-musthave-devops/internal/config"
+	"github.com/zklevsha/go-musthave-devops/internal/db"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
@@ -50,7 +52,9 @@ func updateMetric(m serializer.Metric) {
 }
 
 type Handlers struct {
-	key string
+	key   string
+	useDB bool
+	db    db.DbConnector
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
@@ -220,10 +224,35 @@ func (h *Handlers) rootHandrer(w http.ResponseWriter, r *http.Request) {
 	h.sendResponse(w, http.StatusOK, resp, compress, asText)
 }
 
-func GetHandler(key string) http.Handler {
-	r := mux.NewRouter()
-	h := Handlers{key: key}
+func (h *Handlers) PingDB(w http.ResponseWriter, r *http.Request) {
+	compress :=
+		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
+	if !h.useDB {
+		h.sendResponse(w, http.StatusInternalServerError,
+			&serializer.Response{Error: "DB backend is not enabled"},
+			compress, asText)
+		return
+	}
+
+	err := h.db.Avaliable()
+	if err != nil {
+		h.sendResponse(w, http.StatusInternalServerError,
+			&serializer.Response{Error: fmt.Sprintf("DB is down: %s", err.Error())},
+			compress, asText)
+		return
+	} else {
+		h.sendResponse(w, http.StatusOK,
+			&serializer.Response{Message: "DB is working correctly"},
+			compress, asText)
+		return
+	}
+}
+
+func GetHandler(c config.ServerConfig) http.Handler {
+	r := mux.NewRouter()
+	h := Handlers{key: c.Key, useDB: c.UseDB, db: db.DbConnector{DSN: c.DSN}}
 	r.HandleFunc("/", h.rootHandrer)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
@@ -240,5 +269,6 @@ func GetHandler(key string) http.Handler {
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
+	r.HandleFunc("/ping", h.PingDB)
 	return r
 }

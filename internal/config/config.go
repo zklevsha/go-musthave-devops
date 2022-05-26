@@ -29,6 +29,8 @@ type ServerConfig struct {
 	StoreFile     string
 	Restore       bool
 	Key           string
+	DSN           string
+	UseDB         bool
 }
 
 func parseInterval(env string, flag string) (time.Duration, error) {
@@ -125,7 +127,7 @@ func GetAgentConfig() AgentConfig {
 
 func GetServerConfig() ServerConfig {
 	var config ServerConfig
-	var addressF, sIntervalF, sFIleF, keyF string
+	var addressF, sIntervalF, sFIleF, keyF, DSNf string
 	var restoreF bool
 
 	flag.StringVar(&addressF, "a", serverAddressDefault,
@@ -136,6 +138,7 @@ func GetServerConfig() ServerConfig {
 		fmt.Sprintf("store file (default: %s)", storeFileDefault))
 	flag.BoolVar(&restoreF, "r", restoreDefault, "restore from file at start")
 	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set responses will not be signed and hash from agent will not be checked)")
+	flag.StringVar(&DSNf, "d", "", "database connection string (postgres://username:password@localhost:5432/database_name)")
 	flag.Parse()
 
 	addressEnv := os.Getenv("ADDRESS")
@@ -143,6 +146,7 @@ func GetServerConfig() ServerConfig {
 	sFileEnv := os.Getenv("STORE_FILE")
 	restoreEnv := os.Getenv("RESTORE")
 	keyEnv := os.Getenv("KEY")
+	DSNenv := os.Getenv("")
 
 	// address
 	if addressEnv != "" {
@@ -188,6 +192,19 @@ func GetServerConfig() ServerConfig {
 		config.Key = keyF
 	}
 
+	// DSN
+	if DSNenv != "" {
+		config.DSN = DSNenv
+	} else {
+		config.DSN = DSNf
+	}
+
+	// uUseDB
+	if config.DSN != "" {
+		config.UseDB = true
+	} else {
+		config.UseDB = false
+	}
 	return config
 
 }

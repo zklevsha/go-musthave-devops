@@ -20,21 +20,26 @@ var wg sync.WaitGroup
 func main() {
 	log.Println("INFO main starting server")
 	config := config.GetServerConfig()
-	log.Printf(
-		"INFO main server config: ServerAddress: %s, StoreInterval: %s, StoreFile: %s, Restore: %t",
-		config.ServerAddress, config.StoreInterval, config.StoreFile, config.Restore)
+	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t",
+		config.ServerAddress, config.UseDB)
+	if !config.UseDB {
+		logMsg += fmt.Sprintf(", StoreInterval: %s, StoreFile: %s, Restore: %t",
+			config.StoreInterval, config.StoreFile, config.Restore)
+	}
+	log.Println(logMsg)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	if config.Restore {
-		dumper.RestoreData(config.StoreFile)
+	if !config.UseDB {
+		if config.Restore {
+			dumper.RestoreData(config.StoreFile)
+		}
+		// Starting dumper
+		wg.Add(1)
+		go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
 	}
 
-	// Starting dumper
-	wg.Add(1)
-	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
-
 	// Starting web server
-	handler := handlers.GetHandler(config.Key)
+	handler := handlers.GetHandler(config)
 	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{
