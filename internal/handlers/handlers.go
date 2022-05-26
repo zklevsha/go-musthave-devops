@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,34 +13,6 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
-
-func updateMetric(m serializer.Metric) {
-	switch m.MType {
-	case "counter":
-		log.Printf("INFO updating metric: id:%s, type:counter, delta:%d \n",
-			m.ID, *m.Delta)
-		storage.Server.IncreaseCounter(m.ID, *m.Delta)
-	case "gauge":
-		log.Printf("INFO updating metric: id:%s, type:gauge, value:%f \n",
-			m.ID, *m.Value)
-		storage.Server.SetGauge(m.ID, *m.Value)
-	}
-}
-
-func sendResponse(w http.ResponseWriter, code int, resp serializer.ServerResponse, compress bool) {
-	responseBody, err := serializer.EncodeServerResponse(resp, compress)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("failed to encode server response: %s", err.Error())))
-		return
-	}
-
-	if compress {
-		w.Header().Set("Content-Encoding", "gzip")
-	}
-	w.WriteHeader(code)
-	w.Write(responseBody)
-}
 
 func getMetric(m serializer.Metric) (serializer.Metric, int, error) {
 	res := serializer.Metric{ID: m.ID, MType: m.MType}
@@ -65,35 +36,86 @@ func getMetric(m serializer.Metric) (serializer.Metric, int, error) {
 	return res, http.StatusOK, nil
 }
 
-func UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
-	m, statusCode, err := serializer.DecodeURL(r)
-	if err != nil {
-		http.Error(w, err.Error(), statusCode)
-		return
+func updateMetric(m serializer.Metric) {
+	switch m.MType {
+	case "counter":
+		log.Printf("INFO updating metric: id:%s, type:counter, delta:%d \n",
+			m.ID, *m.Delta)
+		storage.Server.IncreaseCounter(m.ID, *m.Delta)
+	case "gauge":
+		log.Printf("INFO updating metric: id:%s, type:gauge, value:%f \n",
+			m.ID, *m.Value)
+		storage.Server.SetGauge(m.ID, *m.Value)
 	}
-	updateMetric(m)
-	w.Write([]byte("metric was saved"))
 }
 
-func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
+type Handlers struct {
+	key string
+}
+
+func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
+	resp serializer.ServerResponse, compress bool, asText bool) {
+	responseBody, err := serializer.EncodeServerResponse(resp, compress, asText, h.key)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(fmt.Sprintf("failed to encode server response: %s", err.Error())))
+		return
+	}
+
+	if compress {
+		w.Header().Set("Content-Encoding", "gzip")
+	}
+	w.WriteHeader(code)
+	w.Write(responseBody)
+}
+
+func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
+	сompress :=
+		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
+
+	m, statusCode, err := serializer.DecodeURL(r)
+	if err != nil {
+		h.sendResponse(w, statusCode, &serializer.Response{Error: err.Error()}, сompress, asText)
+		return
+	}
+
+	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
+		h.sendResponse(w, http.StatusBadRequest,
+			&serializer.Response{Error: "invalid hash value"},
+			сompress, asText)
+		return
+	}
+
+	updateMetric(m)
+
+	h.sendResponse(w, http.StatusOK,
+		&serializer.Response{Message: "metric was saved"}, сompress, asText)
+}
+
+func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	requestCompressed :=
 		strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
 	compressResponse :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	asText :=
+		!strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		e := fmt.Sprintf("failed to read body: %s", err.Error())
-		sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, compressResponse)
+		h.sendResponse(w, http.StatusBadRequest,
+			&serializer.Response{Error: e}, compressResponse, asText)
 	}
 
 	if requestCompressed {
 		b, err = archive.Decompress(b)
 		if err != nil {
 			e := fmt.Sprintf("Failed to decompress request body: %s", err.Error())
-			sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, compressResponse)
+			h.sendResponse(w, http.StatusBadRequest, &serializer.Response{Error: e},
+				compressResponse, asText)
 			return
 		}
 	}
@@ -101,34 +123,45 @@ func UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	m, err := serializer.DecodeBody(bytes.NewReader(b))
 	if err != nil {
 		e := fmt.Sprintf("Failed to decode request body: %s", err.Error())
-		sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, compressResponse)
+		h.sendResponse(w, http.StatusBadRequest, &serializer.Response{Error: e},
+			compressResponse, asText)
 		return
 	}
+
+	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
+		h.sendResponse(w, http.StatusBadRequest,
+			&serializer.Response{Error: "invalid hash value"},
+			compressResponse, asText)
+		return
+	}
+
 	updateMetric(m)
-	sendResponse(w, http.StatusOK, serializer.ServerResponse{Result: "metric was saved"}, compressResponse)
+	h.sendResponse(w, http.StatusOK, &serializer.Response{Message: "metric was saved"},
+		compressResponse, asText)
 
 }
 
-func GetMetricHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
+	сompress :=
+		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
+
 	m, statusCode, err := serializer.DecodeURL(r)
 	if err != nil {
 		e := fmt.Sprintf("failed to decode url: %s", err.Error())
-		sendResponse(w, statusCode, serializer.ServerResponse{Error: e}, false)
+		h.sendResponse(w, statusCode, &serializer.Response{Error: e}, сompress, asText)
 		return
 	}
-	result, statusCode, err := getMetric(m)
+	metric, statusCode, err := getMetric(m)
 	if err != nil {
-		sendResponse(w, statusCode, serializer.ServerResponse{Error: err.Error()}, false)
+		h.sendResponse(w, statusCode, &serializer.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
-	if m.MType == "gauge" {
-		w.Write([]byte(fmt.Sprintf("%.3f", *result.Value)))
-		return
-	}
-	w.Write([]byte(fmt.Sprintf("%d", *result.Delta)))
+
+	h.sendResponse(w, http.StatusOK, &metric, сompress, asText)
 }
 
-func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GetMetricJSONHandler: request header %+v", r.Header)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -137,18 +170,22 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 		strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
 	compressResponse :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	responseAsText :=
+		!strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		e := fmt.Sprintf("failed to read body: %s", err.Error())
-		sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, compressResponse)
+		h.sendResponse(w, http.StatusBadRequest, &serializer.Response{Error: e},
+			compressResponse, responseAsText)
 	}
 
 	if requestCompressed {
 		b, err = archive.Decompress(b)
 		if err != nil {
 			e := fmt.Sprintf("Failed to decompress request body: %s", err.Error())
-			sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, compressResponse)
+			h.sendResponse(w, http.StatusBadRequest, &serializer.Response{Error: e},
+				compressResponse, responseAsText)
 			return
 		}
 	}
@@ -156,73 +193,50 @@ func GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	m, err := serializer.DecodeBody(bytes.NewReader(b))
 	if err != nil {
 		e := fmt.Sprintf("failed to decode request body: %s", err.Error())
-		sendResponse(w, http.StatusBadRequest, serializer.ServerResponse{Error: e}, compressResponse)
+		h.sendResponse(w, http.StatusBadRequest, &serializer.Response{Error: e},
+			compressResponse, responseAsText)
 		return
 	}
 
 	metric, statusCode, err := getMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
-		sendResponse(w, statusCode, serializer.ServerResponse{Error: e}, compressResponse)
+		h.sendResponse(w, statusCode, &serializer.Response{Error: e},
+			compressResponse, responseAsText)
 		return
 	}
 
-	response, err := json.Marshal(metric)
-	if err != nil {
-		e := fmt.Sprintf("failed to convert metrics to json: %s", err.Error())
-		sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, compressResponse)
-		return
-	}
-
-	if compressResponse {
-		response, err = archive.Compress(response)
-		if err != nil {
-			e := fmt.Sprintf("failed to compress response: %s", err.Error())
-			sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, compressResponse)
-			return
-		}
-		w.Header().Set("Content-Encoding", "gzip")
-	}
-	w.Write(response)
+	h.sendResponse(w, http.StatusOK, &metric, compressResponse, responseAsText)
 
 }
 
-func rootHandrer(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) rootHandrer(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	var err error
-	compressResponse :=
+	compress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
-	resp := []byte("<html><body><h1>Server is wokring</h1></body></html>")
-	if compressResponse {
-		resp, err = archive.Compress(resp)
-		if err != nil {
-			e := fmt.Sprintf("failed to compress response: %s", err.Error())
-			sendResponse(w, http.StatusInternalServerError, serializer.ServerResponse{Error: e}, compressResponse)
-			return
-		}
-		w.Header().Set("Content-Encoding", "gzip")
-
-	}
-	w.Write(resp)
+	resp := &serializer.Response{Message: "<html><body><h1>Server is wokring</h1></body></html>"}
+	h.sendResponse(w, http.StatusOK, resp, compress, asText)
 }
 
-func GetHandler() http.Handler {
+func GetHandler(key string) http.Handler {
 	r := mux.NewRouter()
+	h := Handlers{key: key}
 
-	r.HandleFunc("/", rootHandrer)
+	r.HandleFunc("/", h.rootHandrer)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
-		UpdateMeticHandler).Methods("POST")
+		h.UpdateMeticHandler).Methods("POST")
 
-	r.HandleFunc("/update/", UpdateMetricJSONHandler).
+	r.HandleFunc("/update/", h.UpdateMetricJSONHandler).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
 	r.HandleFunc("/value/{metricType}/{metricID}",
-		GetMetricHandler).Methods("GET")
+		h.GetMetricHandler).Methods("GET")
 
-	r.HandleFunc("/value/", GetMetricJSONHandler).
+	r.HandleFunc("/value/", h.GetMetricJSONHandler).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 

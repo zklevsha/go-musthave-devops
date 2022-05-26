@@ -20,6 +20,7 @@ type AgentConfig struct {
 	PollInterval   time.Duration
 	ReportInterval time.Duration
 	ServerAddress  string
+	Key            string
 }
 
 type ServerConfig struct {
@@ -27,6 +28,7 @@ type ServerConfig struct {
 	StoreInterval time.Duration
 	StoreFile     string
 	Restore       bool
+	Key           string
 }
 
 func parseInterval(env string, flag string) (time.Duration, error) {
@@ -69,18 +71,20 @@ func parseInterval(env string, flag string) (time.Duration, error) {
 func GetAgentConfig() AgentConfig {
 	var config AgentConfig
 
-	var addressF, reportF, pollF string
+	var addressF, reportF, pollF, keyF string
 	flag.StringVar(&addressF, "a", serverAddressDefault,
 		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
 	flag.StringVar(&reportF, "r", reportIntervalDefault.String(),
 		fmt.Sprintf("report interval (default: %s)", reportIntervalDefault))
 	flag.StringVar(&pollF, "p", pollIntervalDefault.String(),
 		fmt.Sprintf("poll interval (default: %s)", pollIntervalDefault))
+	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set messages will not be signed)")
 	flag.Parse()
 
 	pollEnv := os.Getenv("POLL_INTERVAL")
 	reportEnv := os.Getenv("REPORT_INTERVAL")
 	addressEnv := os.Getenv("ADDRESS")
+	keyEnv := os.Getenv("KEY")
 
 	// pollInterval
 	pollInterval, err := parseInterval(pollEnv, pollF)
@@ -109,12 +113,19 @@ func GetAgentConfig() AgentConfig {
 		config.ServerAddress = addressF
 	}
 
+	// key
+	if keyEnv != "" {
+		config.Key = keyEnv
+	} else {
+		config.Key = keyF
+	}
+
 	return config
 }
 
 func GetServerConfig() ServerConfig {
 	var config ServerConfig
-	var addressF, sIntervalF, sFIleF string
+	var addressF, sIntervalF, sFIleF, keyF string
 	var restoreF bool
 
 	flag.StringVar(&addressF, "a", serverAddressDefault,
@@ -124,12 +135,14 @@ func GetServerConfig() ServerConfig {
 	flag.StringVar(&sFIleF, "f", storeFileDefault,
 		fmt.Sprintf("store file (default: %s)", storeFileDefault))
 	flag.BoolVar(&restoreF, "r", restoreDefault, "restore from file at start")
+	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set responses will not be signed and hash from agent will not be checked)")
 	flag.Parse()
 
 	addressEnv := os.Getenv("ADDRESS")
 	sIntervalEnv := os.Getenv("STORE_INTERVAL")
 	sFileEnv := os.Getenv("STORE_FILE")
 	restoreEnv := os.Getenv("RESTORE")
+	keyEnv := os.Getenv("KEY")
 
 	// address
 	if addressEnv != "" {
@@ -167,6 +180,14 @@ func GetServerConfig() ServerConfig {
 	} else {
 		config.StoreInterval = sInterval
 	}
+
+	// key
+	if keyEnv != "" {
+		config.Key = keyEnv
+	} else {
+		config.Key = keyF
+	}
+
 	return config
 
 }

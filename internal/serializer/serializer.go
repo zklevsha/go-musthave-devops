@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
+	"github.com/zklevsha/go-musthave-devops/internal/hash"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
@@ -17,13 +18,69 @@ type Metric struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`  // hmac метрики
+}
+
+func (m *Metric) CalculateHash(key string) string {
+	var str string
+	if m.MType == "gauge" {
+		str = fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value)
+	} else {
+		str = fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta)
+	}
+	return hash.Sign(key, str)
+}
+
+func (m *Metric) SetHash(key string) {
+	m.Hash = m.CalculateHash(key)
+}
+
+func (m *Metric) AsText() string {
+	var str string
+	if m.MType == "gauge" {
+		str = fmt.Sprintf("%.3f", *m.Value)
+	} else {
+		str = fmt.Sprintf("%d", *m.Delta)
+	}
+	if m.Hash != "" {
+		str += fmt.Sprintf(";%s", m.Hash)
+	}
+	return str
 }
 
 type Metrics []Metric
 
-type ServerResponse struct {
-	Result string `json:"result"`
-	Error  string `json:"error"`
+type Response struct {
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Hash    string `json:"hash,omitempty"`
+}
+
+func (s *Response) CalculateHash(key string) string {
+	return hash.Sign(key, fmt.Sprintf("msg:%s;err:%s", s.Message, s.Error))
+}
+
+func (s *Response) SetHash(key string) {
+	s.Hash = s.CalculateHash(key)
+}
+
+func (s Response) AsText() string {
+	var msg string
+	if s.Message != "" {
+		msg = fmt.Sprintf("meassage:%s;", s.Message)
+	}
+	if s.Error != "" {
+		msg += fmt.Sprintf("error:%s;", s.Error)
+	}
+	if s.Hash != "" {
+		msg += fmt.Sprintf("hash:%s;", s.Hash)
+	}
+	return msg
+}
+
+type ServerResponse interface {
+	AsText() string
+	SetHash(key string)
 }
 
 func DecodeBody(body io.Reader) (Metric, error) {
@@ -69,24 +126,45 @@ func DecodeURL(r *http.Request) (Metric, int, error) {
 	}
 }
 
-func EncodeBodyGauge(id string, value float64) ([]byte, error) {
-	return json.Marshal(Metric{ID: id, MType: "gauge", Value: &value})
-}
-
-func EncodeBodyCounter(id string, value int64) ([]byte, error) {
-	return json.Marshal(Metric{ID: id, MType: "counter", Delta: &value})
-}
-
-func EncodeServerResponse(resp ServerResponse, compress bool) ([]byte, error) {
-	j, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode server response: %s", err.Error())
+func EncodeBodyGauge(id string, value float64, key string) ([]byte, error) {
+	m := Metric{ID: id, MType: "gauge", Value: &value}
+	if key != "" {
+		m.SetHash(key)
 	}
+	return json.Marshal(m)
+}
+
+func EncodeBodyCounter(id string, value int64, key string) ([]byte, error) {
+	m := Metric{ID: id, MType: "counter", Delta: &value}
+	if key != "" {
+		m.SetHash(key)
+
+	}
+	return json.Marshal(m)
+}
+
+func EncodeServerResponse(resp ServerResponse, compress bool, asText bool, key string) ([]byte, error) {
+	if key != "" {
+		resp.SetHash(key)
+	}
+
+	var msg []byte
+	var err error
+
+	if asText {
+		msg = []byte(resp.AsText())
+	} else {
+		msg, err = json.Marshal(resp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode server response to json %s", err.Error())
+		}
+	}
+
 	if !compress {
-		return j, nil
+		return msg, nil
 	}
 
-	compressed, err := archive.Compress(j)
+	compressed, err := archive.Compress(msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compress server response %s", err.Error())
 	}

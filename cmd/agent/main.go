@@ -25,7 +25,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	wg.Add(2)
 	go poller.Poll(ctx, &wg, agentConfig.PollInterval)
-	go reporter.Report(ctx, &wg, agentConfig.ServerAddress, agentConfig.ReportInterval)
+	go reporter.Report(ctx, &wg, agentConfig)
 	sig := <-c
 	log.Printf("INFO main got a signal '%v', start shutting down...\n", sig)
 	cancel()
