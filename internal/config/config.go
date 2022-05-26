@@ -146,7 +146,7 @@ func GetServerConfig() ServerConfig {
 	sFileEnv := os.Getenv("STORE_FILE")
 	restoreEnv := os.Getenv("RESTORE")
 	keyEnv := os.Getenv("KEY")
-	DSNenv := os.Getenv("")
+	DSNenv := os.Getenv("DATABASE_DSN")
 
 	// address
 	if addressEnv != "" {

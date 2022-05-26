@@ -6,11 +6,11 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-type DbConnector struct {
+type DBConnector struct {
 	DSN string
 }
 
-func (d DbConnector) Avaliable() error {
+func (d DBConnector) Avaliable() error {
 	ctx := context.Background()
 	con, err := pgx.Connect(ctx, d.DSN)
 	if err == nil {

@@ -54,7 +54,7 @@ func updateMetric(m serializer.Metric) {
 type Handlers struct {
 	key   string
 	useDB bool
-	db    db.DbConnector
+	db    db.DBConnector
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
@@ -252,7 +252,7 @@ func (h *Handlers) PingDB(w http.ResponseWriter, r *http.Request) {
 
 func GetHandler(c config.ServerConfig) http.Handler {
 	r := mux.NewRouter()
-	h := Handlers{key: c.Key, useDB: c.UseDB, db: db.DbConnector{DSN: c.DSN}}
+	h := Handlers{key: c.Key, useDB: c.UseDB, db: db.DBConnector{DSN: c.DSN}}
 	r.HandleFunc("/", h.rootHandrer)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
