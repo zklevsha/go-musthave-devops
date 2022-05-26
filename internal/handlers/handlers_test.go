@@ -39,7 +39,7 @@ func TestUpdateMeticHandler(t *testing.T) {
 			},
 			want: want{
 				code:     200,
-				response: "metric was saved",
+				response: "meassage:metric was saved;",
 			},
 		},
 
@@ -52,7 +52,7 @@ func TestUpdateMeticHandler(t *testing.T) {
 			},
 			want: want{
 				code:     200,
-				response: "metric was saved",
+				response: "meassage:metric was saved;",
 			},
 		},
 	}
