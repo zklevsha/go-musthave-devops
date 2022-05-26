@@ -20,7 +20,8 @@ var wg sync.WaitGroup
 func main() {
 	log.Println("INFO main starting server")
 	config := config.GetServerConfig()
-	log.Printf("INFO main server config: ServerAddress: %s, StoreInterval: %s, StoreFile: %s, Restore: %t",
+	log.Printf(
+		"INFO main server config: ServerAddress: %s, StoreInterval: %s, StoreFile: %s, Restore: %t",
 		config.ServerAddress, config.StoreInterval, config.StoreFile, config.Restore)
 	ctx, cancel := context.WithCancel(context.Background())
 

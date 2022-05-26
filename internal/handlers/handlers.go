@@ -79,6 +79,14 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		h.sendResponse(w, statusCode, &serializer.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
+
+	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
+		h.sendResponse(w, http.StatusBadRequest,
+			&serializer.Response{Error: "invalid hash value"},
+			сompress, asText)
+		return
+	}
+
 	updateMetric(m)
 
 	h.sendResponse(w, http.StatusOK,
@@ -119,6 +127,14 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 			compressResponse, asText)
 		return
 	}
+
+	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
+		h.sendResponse(w, http.StatusBadRequest,
+			&serializer.Response{Error: "invalid hash value"},
+			compressResponse, asText)
+		return
+	}
+
 	updateMetric(m)
 	h.sendResponse(w, http.StatusOK, &serializer.Response{Message: "metric was saved"},
 		compressResponse, asText)

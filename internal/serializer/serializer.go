@@ -75,7 +75,7 @@ func (s Response) AsText() string {
 	if s.Hash != "" {
 		msg += fmt.Sprintf("hash:%s;", s.Hash)
 	}
-	return s.Message
+	return msg
 }
 
 type ServerResponse interface {
@@ -129,7 +129,7 @@ func DecodeURL(r *http.Request) (Metric, int, error) {
 func EncodeBodyGauge(id string, value float64, key string) ([]byte, error) {
 	m := Metric{ID: id, MType: "gauge", Value: &value}
 	if key != "" {
-		m.Hash = hash.Sign(key, fmt.Sprintf("%s:gauge:%f", id, value))
+		m.SetHash(key)
 	}
 	return json.Marshal(m)
 }
@@ -137,7 +137,7 @@ func EncodeBodyGauge(id string, value float64, key string) ([]byte, error) {
 func EncodeBodyCounter(id string, value int64, key string) ([]byte, error) {
 	m := Metric{ID: id, MType: "counter", Delta: &value}
 	if key != "" {
-		m.Hash = m.CalculateHash(key)
+		m.SetHash(key)
 
 	}
 	return json.Marshal(m)
