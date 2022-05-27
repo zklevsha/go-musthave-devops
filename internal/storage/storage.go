@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"sync"
 )
@@ -92,6 +93,18 @@ func (s *MemoryStorage) GetAllCounters() map[string]int64 {
 	return c
 }
 
+func (s *MemoryStorage) Avaliable() error {
+	return nil
+
+}
+
+func (s *MemoryStorage) Close() {
+}
+
+func (s *MemoryStorage) Init(ctx context.Context) error {
+	return nil
+}
+
 func NewMemoryStorage() Storage {
 	return &MemoryStorage{
 		counters:   map[string]int64{},
@@ -111,7 +124,9 @@ type Storage interface {
 	IncreaseCounter(metricName string, metricValue int64)
 	GetAllCounters() map[string]int64
 	ResetCounter(metricName string) error
+	Avaliable() error
+	Close()
+	Init(context.Context) error
 }
 
-var Server = NewMemoryStorage()
 var Agent = NewMemoryStorage()

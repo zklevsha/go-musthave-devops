@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,23 +12,27 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
 	"github.com/zklevsha/go-musthave-devops/internal/config"
-	"github.com/zklevsha/go-musthave-devops/internal/db"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func getMetric(m serializer.Metric) (serializer.Metric, int, error) {
+type Handlers struct {
+	key     string
+	storage storage.Storage
+}
+
+func (h *Handlers) getMetric(m serializer.Metric) (serializer.Metric, int, error) {
 
 	switch m.MType {
 	case "counter":
-		v, err := storage.Server.GetCounter(m.ID)
+		v, err := h.storage.GetCounter(m.ID)
 		if err != nil {
 			e := fmt.Errorf("failed to get  %s: %s", m.ID, err.Error())
 			return m, 404, e
 		}
 		m.Delta = &v
 	case "gauge":
-		v, err := storage.Server.GetGauge(m.ID)
+		v, err := h.storage.GetGauge(m.ID)
 		if err != nil {
 			e := fmt.Errorf("failed to get  %s: %s", m.ID, err.Error())
 			return m, 404, e
@@ -41,23 +46,17 @@ func getMetric(m serializer.Metric) (serializer.Metric, int, error) {
 	return m, http.StatusOK, nil
 }
 
-func updateMetric(m serializer.Metric) {
+func (h *Handlers) updateMetric(m serializer.Metric) {
 	switch m.MType {
 	case "counter":
 		log.Printf("INFO updating metric: id:%s, type:counter, delta:%d \n",
 			m.ID, *m.Delta)
-		storage.Server.IncreaseCounter(m.ID, *m.Delta)
+		h.storage.IncreaseCounter(m.ID, *m.Delta)
 	case "gauge":
 		log.Printf("INFO updating metric: id:%s, type:gauge, value:%f \n",
 			m.ID, *m.Value)
-		storage.Server.SetGauge(m.ID, *m.Value)
+		h.storage.SetGauge(m.ID, *m.Value)
 	}
-}
-
-type Handlers struct {
-	key   string
-	useDB bool
-	db    db.DBConnector
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
@@ -94,7 +93,7 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updateMetric(m)
+	h.updateMetric(m)
 
 	h.sendResponse(w, http.StatusOK,
 		&serializer.Response{Message: "metric was saved"}, сompress, asText)
@@ -142,7 +141,7 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updateMetric(m)
+	h.updateMetric(m)
 	h.sendResponse(w, http.StatusOK, &serializer.Response{Message: "metric was saved"},
 		compressResponse, asText)
 
@@ -159,7 +158,7 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 		h.sendResponse(w, statusCode, &serializer.Response{Error: e}, сompress, asText)
 		return
 	}
-	metric, statusCode, err := getMetric(m)
+	metric, statusCode, err := h.getMetric(m)
 	if err != nil {
 		log.Printf(" WARN failed to get metric: %s", err.Error())
 		h.sendResponse(w, statusCode, &serializer.Response{Error: err.Error()}, сompress, asText)
@@ -203,7 +202,7 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 			compressResponse, responseAsText)
 		return
 	}
-	metric, statusCode, err := getMetric(m)
+	metric, statusCode, err := h.getMetric(m)
 
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
@@ -227,19 +226,12 @@ func (h *Handlers) rootHandrer(w http.ResponseWriter, r *http.Request) {
 	h.sendResponse(w, http.StatusOK, resp, compress, asText)
 }
 
-func (h *Handlers) PingDB(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
 	compress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
 	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
-	if !h.useDB {
-		h.sendResponse(w, http.StatusInternalServerError,
-			&serializer.Response{Error: "DB backend is not enabled"},
-			compress, asText)
-		return
-	}
-
-	err := h.db.Avaliable()
+	err := h.storage.Avaliable()
 	if err != nil {
 		h.sendResponse(w, http.StatusInternalServerError,
 			&serializer.Response{Error: fmt.Sprintf("DB is down: %s", err.Error())},
@@ -253,9 +245,9 @@ func (h *Handlers) PingDB(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetHandler(c config.ServerConfig) http.Handler {
+func GetHandler(c config.ServerConfig, ctx context.Context, store storage.Storage) http.Handler {
 	r := mux.NewRouter()
-	h := Handlers{key: c.Key, useDB: c.UseDB, db: db.DBConnector{DSN: c.DSN}}
+	h := Handlers{key: c.Key, storage: store}
 	r.HandleFunc("/", h.rootHandrer)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
@@ -272,6 +264,6 @@ func GetHandler(c config.ServerConfig) http.Handler {
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
-	r.HandleFunc("/ping", h.PingDB)
+	r.HandleFunc("/ping", h.Ping)
 	return r
 }

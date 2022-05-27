@@ -175,10 +175,10 @@ func EncodeServerResponse(resp ServerResponse, compress bool, asText bool, key s
 	return compressed, nil
 }
 
-func EncodeMetrics() ([]byte, error) {
+func EncodeMetrics(store storage.Storage) ([]byte, error) {
 	metrics := Metrics{}
-	counters := storage.Server.GetAllCounters()
-	gauges := storage.Server.GetAllGauges()
+	counters := store.GetAllCounters()
+	gauges := store.GetAllGauges()
 	for k := range counters {
 		d := counters[k]
 		metrics = append(metrics, Metric{ID: k, Delta: &d, MType: "counter"})
