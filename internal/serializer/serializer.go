@@ -89,6 +89,10 @@ func DecodeBody(body io.Reader) (Metric, error) {
 	if err != nil {
 		return Metric{}, err
 	}
+	if m.MType != "counter" && m.MType != "gauge" {
+		err = fmt.Errorf("uknown metric type: %s", m.MType)
+		return m, err
+	}
 	return m, err
 }
 

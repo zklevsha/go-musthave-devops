@@ -19,6 +19,8 @@ var wg sync.WaitGroup
 
 func main() {
 	log.Println("INFO main starting server")
+	log.Printf("DEBUG startup flags: %v", os.Args)
+	log.Printf("DEBUG ENVs: %v", os.Environ())
 	config := config.GetServerConfig()
 	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t",
 		config.ServerAddress, config.UseDB)

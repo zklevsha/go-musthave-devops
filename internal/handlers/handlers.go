@@ -17,25 +17,28 @@ import (
 )
 
 func getMetric(m serializer.Metric) (serializer.Metric, int, error) {
-	res := serializer.Metric{ID: m.ID, MType: m.MType}
+
 	switch m.MType {
 	case "counter":
 		v, err := storage.Server.GetCounter(m.ID)
 		if err != nil {
 			e := fmt.Errorf("failed to get  %s: %s", m.ID, err.Error())
-			return res, 404, e
+			return m, 404, e
 		}
-		res.Delta = &v
+		m.Delta = &v
 	case "gauge":
 		v, err := storage.Server.GetGauge(m.ID)
 		if err != nil {
 			e := fmt.Errorf("failed to get  %s: %s", m.ID, err.Error())
-			return res, 404, e
+			return m, 404, e
 		}
-		res.Value = &v
+		m.Value = &v
+	default:
+		e := fmt.Errorf("failed to get %s: unknown metric type: %s", m.ID, m.MType)
+		return m, 500, e
 
 	}
-	return res, http.StatusOK, nil
+	return m, http.StatusOK, nil
 }
 
 func updateMetric(m serializer.Metric) {
@@ -166,7 +169,6 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("GetMetricJSONHandler: request header %+v", r.Header)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 

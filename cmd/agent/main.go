@@ -17,6 +17,8 @@ var wg sync.WaitGroup
 
 func main() {
 	log.Printf("INFO main starting agent")
+	log.Printf("DEBUG startup flags: %v", os.Args)
+	log.Printf("DEBUG ENVs: %v", os.Environ())
 	agentConfig := config.GetAgentConfig()
 	log.Printf("INFO main agent config: PollInterval: %v, ReportInterval: %v, ServerAddress: %s",
 		agentConfig.PollInterval, agentConfig.ReportInterval, agentConfig.ServerAddress)
