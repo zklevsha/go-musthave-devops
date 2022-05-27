@@ -161,6 +161,7 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	metric, statusCode, err := getMetric(m)
 	if err != nil {
+		log.Printf(" WARN failed to get metric: %s", err.Error())
 		h.sendResponse(w, statusCode, &serializer.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
@@ -169,7 +170,6 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
-
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	requestCompressed :=
@@ -203,10 +203,11 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 			compressResponse, responseAsText)
 		return
 	}
-
 	metric, statusCode, err := getMetric(m)
+
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
+		log.Printf("WARN %s", e)
 		h.sendResponse(w, statusCode, &serializer.Response{Error: e},
 			compressResponse, responseAsText)
 		return
