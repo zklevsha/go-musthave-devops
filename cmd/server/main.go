@@ -21,7 +21,9 @@ func main() {
 	log.Println("INFO main starting server")
 	log.Printf("DEBUG startup flags: %v", os.Args)
 	log.Printf("DEBUG ENVs: %v", os.Environ())
+
 	config := config.GetServerConfig()
+
 	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t",
 		config.ServerAddress, config.UseDB)
 	if !config.UseDB {
@@ -29,16 +31,15 @@ func main() {
 			config.StoreInterval, config.StoreFile, config.Restore)
 	}
 	log.Println(logMsg)
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	if !config.UseDB {
-		if config.Restore {
-			dumper.RestoreData(config.StoreFile)
-		}
-		// Starting dumper
-		wg.Add(1)
-		go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
+	if config.Restore {
+		dumper.RestoreData(config.StoreFile)
 	}
+	// Starting dumper
+	wg.Add(1)
+	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
 
 	// Starting web server
 	handler := handlers.GetHandler(config)
