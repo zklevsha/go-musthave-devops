@@ -50,7 +50,12 @@ func send(url string, body []byte) error {
 
 func reportGauges(serverSocket string, key string) {
 	url := fmt.Sprintf("http://%s/update/", serverSocket)
-	for k, v := range storage.Agent.GetAllGauges() {
+	counters, err := storage.Agent.GetAllGauges()
+	if err != nil {
+		log.Printf("ERROR failed get gauges: %s", err.Error())
+		return
+	}
+	for k, v := range counters {
 		body, err := serializer.EncodeBodyGauge(k, v, key)
 		if err != nil {
 			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
@@ -69,7 +74,12 @@ func reportGauges(serverSocket string, key string) {
 
 func reportCounters(serverSocket string, key string) {
 	url := fmt.Sprintf("http://%s/update/", serverSocket)
-	for k, v := range storage.Agent.GetAllCounters() {
+	counters, err := storage.Agent.GetAllCounters()
+	if err != nil {
+		log.Printf("ERROR failed get gauges: %s", err.Error())
+		return
+	}
+	for k, v := range counters {
 		body, err := serializer.EncodeBodyCounter(k, v, key)
 		if err != nil {
 			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",

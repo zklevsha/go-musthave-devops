@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"fmt"
 	"sync"
 )
@@ -25,20 +24,21 @@ func (s *MemoryStorage) GetGauge(metricName string) (float64, error) {
 	}
 }
 
-func (s *MemoryStorage) SetGauge(metricName string, metricValue float64) {
+func (s *MemoryStorage) SetGauge(metricName string, metricValue float64) error {
 	s.gaugesMx.Lock()
 	s.gauges[metricName] = metricValue
 	s.gaugesMx.Unlock()
+	return nil
 }
 
-func (s *MemoryStorage) GetAllGauges() map[string]float64 {
+func (s *MemoryStorage) GetAllGauges() (map[string]float64, error) {
 	c := make(map[string]float64)
 	s.gaugesMx.RLock()
 	for k, v := range s.gauges {
 		c[k] = v
 	}
 	s.gaugesMx.RUnlock()
-	return c
+	return c, nil
 }
 
 func (s *MemoryStorage) GetCounter(metricName string) (int64, error) {
@@ -53,7 +53,7 @@ func (s *MemoryStorage) GetCounter(metricName string) (int64, error) {
 	}
 }
 
-func (s *MemoryStorage) IncreaseCounter(metricName string, metricValue int64) {
+func (s *MemoryStorage) IncreaseCounter(metricName string, metricValue int64) error {
 	if _, ok := s.counters[metricName]; ok {
 		s.countersMx.Lock()
 		s.counters[metricName] += metricValue
@@ -63,6 +63,7 @@ func (s *MemoryStorage) IncreaseCounter(metricName string, metricValue int64) {
 		s.counters[metricName] = metricValue
 		s.countersMx.Unlock()
 	}
+	return nil
 }
 
 func (s *MemoryStorage) ResetCounter(metricName string) error {
@@ -77,20 +78,21 @@ func (s *MemoryStorage) ResetCounter(metricName string) error {
 
 }
 
-func (s *MemoryStorage) SetCounter(metricName string, metricValue int64) {
+func (s *MemoryStorage) SetCounter(metricName string, metricValue int64) error {
 	s.countersMx.Lock()
 	s.counters[metricName] = metricValue
 	s.countersMx.Unlock()
+	return nil
 }
 
-func (s *MemoryStorage) GetAllCounters() map[string]int64 {
+func (s *MemoryStorage) GetAllCounters() (map[string]int64, error) {
 	c := make(map[string]int64)
 	s.countersMx.RLock()
 	for k, v := range s.counters {
 		c[k] = v
 	}
 	s.countersMx.RUnlock()
-	return c
+	return c, nil
 }
 
 func (s *MemoryStorage) Avaliable() error {
@@ -101,7 +103,7 @@ func (s *MemoryStorage) Avaliable() error {
 func (s *MemoryStorage) Close() {
 }
 
-func (s *MemoryStorage) Init(ctx context.Context) error {
+func (s *MemoryStorage) Init() error {
 	return nil
 }
 
@@ -117,16 +119,16 @@ func NewMemoryStorage() Storage {
 
 type Storage interface {
 	GetGauge(metricName string) (float64, error)
-	SetGauge(metricName string, metricValue float64)
-	GetAllGauges() map[string]float64
+	SetGauge(metricName string, metricValue float64) error
+	GetAllGauges() (map[string]float64, error)
 	GetCounter(metricName string) (int64, error)
-	SetCounter(metricName string, metricValue int64)
-	IncreaseCounter(metricName string, metricValue int64)
-	GetAllCounters() map[string]int64
+	SetCounter(metricName string, metricValue int64) error
+	IncreaseCounter(metricName string, metricValue int64) error
+	GetAllCounters() (map[string]int64, error)
 	ResetCounter(metricName string) error
 	Avaliable() error
 	Close()
-	Init(context.Context) error
+	Init() error
 }
 
 var Agent = NewMemoryStorage()

@@ -93,6 +93,7 @@ func DecodeBody(body io.Reader) (Metric, error) {
 		err = fmt.Errorf("uknown metric type: %s", m.MType)
 		return m, err
 	}
+
 	return m, err
 }
 
@@ -177,8 +178,16 @@ func EncodeServerResponse(resp ServerResponse, compress bool, asText bool, key s
 
 func EncodeMetrics(store storage.Storage) ([]byte, error) {
 	metrics := Metrics{}
-	counters := store.GetAllCounters()
-	gauges := store.GetAllGauges()
+	counters, err := store.GetAllCounters()
+	if err != nil {
+		e := fmt.Errorf("failed to get all counters: %s", err.Error())
+		return []byte{}, e
+	}
+	gauges, err := store.GetAllGauges()
+	if err != nil {
+		e := fmt.Errorf("failed to get all gauges: %s", err.Error())
+		return []byte{}, e
+	}
 	for k := range counters {
 		d := counters[k]
 		metrics = append(metrics, Metric{ID: k, Delta: &d, MType: "counter"})

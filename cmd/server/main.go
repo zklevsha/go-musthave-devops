@@ -37,8 +37,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	var s storage.Storage
 	if config.UseDB {
-		s = &db.DBConnector{DSN: config.DSN}
-		err := s.Init(ctx)
+		s = &db.DBConnector{DSN: config.DSN, Ctx: ctx}
+		err := s.Init()
 		if err != nil {
 			log.Panicf("failed to init connection to database: %s", err.Error())
 		}

@@ -46,16 +46,20 @@ func (h *Handlers) getMetric(m serializer.Metric) (serializer.Metric, int, error
 	return m, http.StatusOK, nil
 }
 
-func (h *Handlers) updateMetric(m serializer.Metric) {
+func (h *Handlers) updateMetric(m serializer.Metric) error {
 	switch m.MType {
 	case "counter":
 		log.Printf("INFO updating metric: id:%s, type:counter, delta:%d \n",
 			m.ID, *m.Delta)
-		h.storage.IncreaseCounter(m.ID, *m.Delta)
+		err := h.storage.IncreaseCounter(m.ID, *m.Delta)
+		return err
 	case "gauge":
 		log.Printf("INFO updating metric: id:%s, type:gauge, value:%f \n",
 			m.ID, *m.Value)
-		h.storage.SetGauge(m.ID, *m.Value)
+		err := h.storage.SetGauge(m.ID, *m.Value)
+		return err
+	default:
+		return fmt.Errorf("unknown metric type: %s", m.MType)
 	}
 }
 
@@ -93,7 +97,14 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.updateMetric(m)
+	err = h.updateMetric(m)
+	if err != nil {
+		e := fmt.Sprintf("failed to update metric %s: %s", m.AsText(), err.Error())
+		h.sendResponse(w, http.StatusInternalServerError,
+			&serializer.Response{Error: e},
+			сompress, asText)
+		return
+	}
 
 	h.sendResponse(w, http.StatusOK,
 		&serializer.Response{Message: "metric was saved"}, сompress, asText)
@@ -140,8 +151,14 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 			compressResponse, asText)
 		return
 	}
-
-	h.updateMetric(m)
+	err = h.updateMetric(m)
+	if err != nil {
+		e := fmt.Sprintf("failed to update metric %s: %s", m.ID, err.Error())
+		h.sendResponse(w, http.StatusInternalServerError,
+			&serializer.Response{Error: e},
+			compressResponse, asText)
+		return
+	}
 	h.sendResponse(w, http.StatusOK, &serializer.Response{Message: "metric was saved"},
 		compressResponse, asText)
 
