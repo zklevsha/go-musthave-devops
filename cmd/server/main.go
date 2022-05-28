@@ -11,8 +11,10 @@ import (
 	"syscall"
 
 	"github.com/zklevsha/go-musthave-devops/internal/config"
+	"github.com/zklevsha/go-musthave-devops/internal/db"
 	"github.com/zklevsha/go-musthave-devops/internal/dumper"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
+	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
 var wg sync.WaitGroup
@@ -33,16 +35,26 @@ func main() {
 	log.Println(logMsg)
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	if config.Restore {
-		dumper.RestoreData(config.StoreFile)
+	var s storage.Storage
+	if config.UseDB {
+		s = &db.DBConnector{DSN: config.DSN, Ctx: ctx}
+		err := s.Init()
+		if err != nil {
+			log.Panicf("failed to init connection to database: %s", err.Error())
+		}
+		defer s.Close()
+	} else {
+		s = storage.NewMemoryStorage()
+		if config.Restore {
+			dumper.RestoreData(config.StoreFile, s)
+		}
+		// Starting dumper
+		wg.Add(1)
+		go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile, s)
 	}
-	// Starting dumper
-	wg.Add(1)
-	go dumper.Start(ctx, &wg, config.StoreInterval, config.StoreFile)
 
 	// Starting web server
-	handler := handlers.GetHandler(config)
+	handler := handlers.GetHandler(config, ctx, s)
 	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{

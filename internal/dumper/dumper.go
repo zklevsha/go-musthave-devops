@@ -13,8 +13,8 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func dump(filePath string) error {
-	encodedMetrics, err := serializer.EncodeMetrics()
+func dump(filePath string, store storage.Storage) error {
+	encodedMetrics, err := serializer.EncodeMetrics(store)
 	if err != nil {
 		return fmt.Errorf("failed to convert metrics to json: %s", err.Error())
 	}
@@ -26,7 +26,7 @@ func dump(filePath string) error {
 	return nil
 }
 
-func restore(filePath string) error {
+func restore(filePath string, store storage.Storage) error {
 	jsonFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open dump file %s: %s", filePath, err.Error())
@@ -38,9 +38,9 @@ func restore(filePath string) error {
 	}
 	for _, m := range metrics {
 		if m.MType == "gauge" {
-			storage.Server.SetGauge(m.ID, *m.Value)
+			store.SetGauge(m.ID, *m.Value)
 		} else if m.MType == "counter" {
-			storage.Server.SetCounter(m.ID, *m.Delta)
+			store.SetCounter(m.ID, *m.Delta)
 		} else {
 			log.Printf("WARN Failed to restore %+v: unknown metric type", m)
 		}
@@ -48,9 +48,9 @@ func restore(filePath string) error {
 	return nil
 }
 
-func dumpData(storeFile string) {
+func dumpData(storeFile string, store storage.Storage) {
 	log.Println("INFO dump dumping data to disk")
-	err := dump(storeFile)
+	err := dump(storeFile, store)
 	if err != nil {
 		log.Printf("ERROR dump failed to save data: %s\n", err.Error())
 	} else {
@@ -59,9 +59,9 @@ func dumpData(storeFile string) {
 
 }
 
-func RestoreData(storeFile string) {
+func RestoreData(storeFile string, store storage.Storage) {
 	log.Println("INFO dump restore data from disk")
-	err := restore(storeFile)
+	err := restore(storeFile, store)
 	if err != nil {
 		log.Printf("ERROR dump failed to restore data: %s\n", err.Error())
 	} else {
@@ -69,7 +69,8 @@ func RestoreData(storeFile string) {
 	}
 }
 
-func Start(ctx context.Context, wg *sync.WaitGroup, storeInterval time.Duration, storeFile string) {
+func Start(ctx context.Context, wg *sync.WaitGroup,
+	storeInterval time.Duration, storeFile string, store storage.Storage) {
 	log.Println("INFO dump starting")
 	defer wg.Done()
 	ticker := time.NewTicker(storeInterval)
@@ -77,10 +78,10 @@ func Start(ctx context.Context, wg *sync.WaitGroup, storeInterval time.Duration,
 		select {
 		case <-ctx.Done():
 			log.Println("INFO dump received ctx.Done()'. Dumping and exiting")
-			dumpData(storeFile)
+			dumpData(storeFile, store)
 			return
 		case <-ticker.C:
-			dumpData(storeFile)
+			dumpData(storeFile, store)
 		}
 	}
 }
