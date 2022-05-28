@@ -256,7 +256,7 @@ func (d *DBConnector) CreateTables() error {
 	}
 	countersSQL := `CREATE TABLE IF NOT EXISTS counters(
 		metric_id varchar(45) NOT NULL,
-		metric_value integer NOT NULL,
+		metric_value bigint NOT NULL,
 		PRIMARY KEY (metric_id)
 	  )`
 
