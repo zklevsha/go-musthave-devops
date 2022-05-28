@@ -52,7 +52,7 @@ func (d *DBConnector) Avaliable() error {
 	return d.Pool.Ping(d.Ctx)
 }
 
-func (d *DBConnector) GetGauge(metricId string) (float64, error) {
+func (d *DBConnector) GetGauge(metricID string) (float64, error) {
 	err := d.checkInit()
 	if err != nil {
 		return -1, err
@@ -64,19 +64,19 @@ func (d *DBConnector) GetGauge(metricId string) (float64, error) {
 		return -1, fmt.Errorf("failed to acquire connection: %s", err.Error())
 	}
 	defer conn.Release()
-	row := conn.QueryRow(d.Ctx, sql, metricId)
+	row := conn.QueryRow(d.Ctx, sql, metricID)
 	switch err := row.Scan(&gauge); err {
 	case pgx.ErrNoRows:
-		return -1, fmt.Errorf("no metric %s was found", metricId)
+		return -1, fmt.Errorf("no metric %s was found", metricID)
 	case nil:
 		return gauge, nil
 	default:
-		e := fmt.Errorf("unknown error while quering metric %s: %s", metricId, err.Error())
+		e := fmt.Errorf("unknown error while quering metric %s: %s", metricID, err.Error())
 		return -1, e
 	}
 }
 
-func (d *DBConnector) SetGauge(metricId string, metricValue float64) error {
+func (d *DBConnector) SetGauge(metricID string, metricValue float64) error {
 	err := d.checkInit()
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (d *DBConnector) SetGauge(metricId string, metricValue float64) error {
 			ON CONFLICT (metric_id) 
 			DO 
 				UPDATE SET metric_value = $2 WHERE gauges.metric_id = $1;`
-	_, err = conn.Exec(d.Ctx, sql, metricId, metricValue)
+	_, err = conn.Exec(d.Ctx, sql, metricID, metricValue)
 	return err
 }
 
@@ -115,13 +115,13 @@ func (d *DBConnector) GetAllGauges() (map[string]float64, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var metricId string
+		var metricID string
 		var metricValue float64
-		if err := rows.Scan(&metricId, &metricValue); err != nil {
+		if err := rows.Scan(&metricID, &metricValue); err != nil {
 			e := fmt.Errorf("failed to convert row to map entry: %s", err.Error())
 			return make(map[string]float64), e
 		}
-		gauges[metricId] = metricValue
+		gauges[metricID] = metricValue
 	}
 
 	if err := rows.Err(); err != nil {
@@ -132,7 +132,7 @@ func (d *DBConnector) GetAllGauges() (map[string]float64, error) {
 	return gauges, nil
 }
 
-func (d *DBConnector) GetCounter(metricId string) (int64, error) {
+func (d *DBConnector) GetCounter(metricID string) (int64, error) {
 	err := d.checkInit()
 	if err != nil {
 		return -1, err
@@ -144,20 +144,20 @@ func (d *DBConnector) GetCounter(metricId string) (int64, error) {
 	defer conn.Release()
 	var counter int64
 	sql := `SELECT metric_value FROM counters WHERE metric_id=$1;`
-	row := conn.QueryRow(d.Ctx, sql, metricId)
+	row := conn.QueryRow(d.Ctx, sql, metricID)
 	switch err := row.Scan(&counter); err {
 	case pgx.ErrNoRows:
-		e := fmt.Errorf("no metric %s was found", metricId)
+		e := fmt.Errorf("no metric %s was found", metricID)
 		return -1, e
 	case nil:
 		return counter, nil
 	default:
-		e := fmt.Errorf("unknown error while quering metric %s: %s", metricId, err.Error())
+		e := fmt.Errorf("unknown error while quering metric %s: %s", metricID, err.Error())
 		return -1, e
 	}
 }
 
-func (d *DBConnector) SetCounter(metricId string, metricValue int64) error {
+func (d *DBConnector) SetCounter(metricID string, metricValue int64) error {
 	err := d.checkInit()
 	if err != nil {
 		return err
@@ -172,10 +172,10 @@ func (d *DBConnector) SetCounter(metricId string, metricValue int64) error {
 			ON CONFLICT (metric_id) 
 			DO 
 				UPDATE SET metric_value = $2 WHERE counters.metric_id = $1;`
-	_, err = conn.Exec(d.Ctx, sql, metricId, metricValue)
+	_, err = conn.Exec(d.Ctx, sql, metricID, metricValue)
 	return err
 }
-func (d *DBConnector) IncreaseCounter(metricId string, metricValue int64) error {
+func (d *DBConnector) IncreaseCounter(metricID string, metricValue int64) error {
 	err := d.checkInit()
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func (d *DBConnector) IncreaseCounter(metricId string, metricValue int64) error 
 			DO
 				UPDATE SET metric_value = counters.metric_value + $2
 				WHERE counters.metric_id = $1;`
-	_, err = conn.Query(d.Ctx, sql, metricId, metricValue)
+	_, err = conn.Query(d.Ctx, sql, metricID, metricValue)
 	return err
 }
 func (d *DBConnector) GetAllCounters() (map[string]int64, error) {
@@ -214,13 +214,13 @@ func (d *DBConnector) GetAllCounters() (map[string]int64, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var metricId string
+		var metricID string
 		var metricValue int64
-		if err := rows.Scan(&metricId, &metricValue); err != nil {
+		if err := rows.Scan(&metricID, &metricValue); err != nil {
 			e := fmt.Errorf("failed to convert row to map entry: %s", err.Error())
 			return make(map[string]int64), e
 		}
-		counters[metricId] = metricValue
+		counters[metricID] = metricValue
 	}
 
 	if err := rows.Err(); err != nil {
@@ -231,7 +231,7 @@ func (d *DBConnector) GetAllCounters() (map[string]int64, error) {
 	return counters, nil
 }
 
-func (d *DBConnector) ResetCounter(metricId string) error {
+func (d *DBConnector) ResetCounter(metricID string) error {
 	err := d.checkInit()
 	if err != nil {
 		return err
@@ -244,7 +244,7 @@ func (d *DBConnector) ResetCounter(metricId string) error {
 	sql := `UPDATE counters 
 			SET metric_value = 0
 			WHERE counters.metric_id = $1;`
-	_, err = conn.Exec(d.Ctx, sql, metricId)
+	_, err = conn.Exec(d.Ctx, sql, metricID)
 	return err
 }
 
