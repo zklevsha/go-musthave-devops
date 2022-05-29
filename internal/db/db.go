@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
 type DBConnector struct {
@@ -274,6 +275,62 @@ func (d *DBConnector) CreateTables() error {
 	_, err = conn.Exec(d.Ctx, gaugesSQL)
 	if err != nil {
 		return fmt.Errorf("cant create пфгпуы table: %s", err.Error())
+	}
+	return nil
+}
+
+func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
+	err := d.checkInit()
+	if err != nil {
+		return err
+	}
+	conn, err := d.Pool.Acquire(d.Ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire connection: %s", err.Error())
+	}
+	defer conn.Release()
+
+	sqlCounters := `INSERT INTO counters (metric_id, metric_value)
+					VALUES($1, $2) 
+					ON CONFLICT (metric_id)
+					DO
+						UPDATE SET metric_value = counters.metric_value + $2
+						WHERE counters.metric_id = $1;`
+	sqlGauges := `INSERT INTO gauges (metric_id, metric_value)
+				  VALUES($1, $2) 
+				  ON CONFLICT (metric_id) 
+				  DO 
+					UPDATE SET metric_value = $2 WHERE gauges.metric_id = $1;`
+	tx, err := conn.Begin(d.Ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %s", err.Error())
+	}
+	// Rollback is safe to call even if the tx is already closed, so if
+	// the tx commits successfully, this is a no-op
+	defer tx.Rollback(d.Ctx)
+
+	for _, m := range metrics {
+		switch m.MType {
+		case "counter":
+			_, err := tx.Exec(d.Ctx, sqlCounters, m.ID, m.Delta)
+			if err != nil {
+				return fmt.Errorf("failed to update counter %s(%d): %s",
+					m.ID, *m.Delta, err.Error())
+			}
+		case "gauge":
+			_, err := tx.Exec(d.Ctx, sqlGauges, m.ID, m.Value)
+			if err != nil {
+				return fmt.Errorf("failed to update gauge %s(%f): %s",
+					m.ID, *m.Value, err.Error())
+			}
+		default:
+			// we shuld not be here. Metric type were checked at serializer.DecodeBodyBatch()
+			return fmt.Errorf("metric %s has unknown type: %s", m.ID, m.MType)
+		}
+	}
+	err = tx.Commit(d.Ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %s", err.Error())
 	}
 	return nil
 }
