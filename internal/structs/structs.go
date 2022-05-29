@@ -138,6 +138,7 @@ func (s *MemoryStorage) UpdateMetrics(metrics []Metric) error {
 		case "gauge":
 			s.gaugesMx.Lock()
 			s.gauges[m.ID] = *m.Value
+			s.gaugesMx.Unlock()
 		default:
 			// we should not be here. All metrics were checked by serializer.DecodeBodyBatch
 			log.Printf("ERROR counter %s has unknown metric type: %s", m.ID, m.MType)
