@@ -91,12 +91,12 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if m.MType == "counter" && m.Delta == nil {
-		e := fmt.Sprintf("delta attribute is not set: %s", err.Error())
+		e := "delta attribute is not set"
 		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
 			сompress, asText)
 	}
 	if m.MType == "gauge" && m.Value == nil {
-		e := fmt.Sprintf("gauge attribute is not set: %s", err.Error())
+		e := "gauge attribute is not set"
 		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
 			сompress, asText)
 	}
@@ -157,12 +157,12 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	if m.MType == "counter" && m.Delta == nil {
-		e := fmt.Sprintf("delta attribute is not set: %s", err.Error())
+		e := "delta attribute is not set"
 		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
 			compressResponse, asText)
 	}
 	if m.MType == "gauge" && m.Value == nil {
-		e := fmt.Sprintf("gauge attribute is not set: %s", err.Error())
+		e := "gauge attribute is not set"
 		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
 			compressResponse, asText)
 	}
