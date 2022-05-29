@@ -48,50 +48,29 @@ func send(url string, body []byte) error {
 	return nil
 }
 
-func reportGauges(serverSocket string, key string) {
-	url := fmt.Sprintf("http://%s/update/", serverSocket)
-	counters, err := storage.Agent.GetAllGauges()
+func reportMetrics(serverSocket string, key string) {
+	url := fmt.Sprintf("http://%s/updates/", serverSocket)
+	metircs, err := storage.Agent.GetMetrics()
 	if err != nil {
-		log.Printf("ERROR failed get gauges: %s", err.Error())
+		log.Printf("ERROR failed to get metrics: %s", err.Error())
+	}
+	body, err := serializer.EncodeBodyMetrics(metircs, key)
+	if err != nil {
+		log.Printf("ERROR failed to encode metrics: %s", err.Error())
 		return
 	}
-	for k, v := range counters {
-		body, err := serializer.EncodeBodyGauge(k, v, key)
-		if err != nil {
-			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
-				k, body, err.Error())
-			continue
-		}
-		err = send(url, body)
-		if err != nil {
-			log.Printf("ERROR failed to send metic %s(%s): %s\n", k, body, err.Error())
-		} else {
-			log.Printf("INFO metric %s(%s) was sent\n", k, body)
-		}
-
-	}
-}
-
-func reportCounters(serverSocket string, key string) {
-	url := fmt.Sprintf("http://%s/update/", serverSocket)
-	counters, err := storage.Agent.GetAllCounters()
+	err = send(url, body)
 	if err != nil {
-		log.Printf("ERROR failed get gauges: %s", err.Error())
+		log.Printf("ERROR failed to send metrics: %s", err.Error())
 		return
 	}
-	for k, v := range counters {
-		body, err := serializer.EncodeBodyCounter(k, v, key)
-		if err != nil {
-			log.Printf("ERROR failed to convert metric %s (%s) to JSON: %s",
-				k, body, err.Error())
-			continue
-		}
-		err = send(url, body)
-		if err != nil {
-			log.Printf("ERROR failed to send metic %s(%s): %s\n", k, body, err.Error())
-		} else {
-			log.Printf("INFO metric %s(%s) was sent\n", k, body)
-			storage.Agent.ResetCounter(k)
+	log.Printf("INFO all metrics were sent")
+	for _, m := range metircs {
+		if m.MType == "counter" {
+			err := storage.Agent.ResetCounter(m.ID)
+			if err != nil {
+				log.Printf("ERROR: failed to reset counter %s: %s", m.ID, err.Error())
+			}
 		}
 	}
 }
@@ -105,8 +84,7 @@ func Report(ctx context.Context, wg *sync.WaitGroup, conf config.AgentConfig) {
 			log.Println("INFO report received ctx.Done(), returning")
 			return
 		case <-ticker.C:
-			reportGauges(conf.ServerAddress, conf.Key)
-			reportCounters(conf.ServerAddress, conf.Key)
+			reportMetrics(conf.ServerAddress, conf.Key)
 		}
 	}
 }

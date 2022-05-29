@@ -81,6 +81,15 @@ func DecodeURL(r *http.Request) (structs.Metric, int, error) {
 	}
 }
 
+func EncodeBodyMetrics(metrics []structs.Metric, key string) ([]byte, error) {
+	if key != "" {
+		for _, m := range metrics {
+			m.SetHash(key)
+		}
+	}
+	return json.Marshal(metrics)
+}
+
 func EncodeBodyGauge(id string, value float64, key string) ([]byte, error) {
 	m := structs.Metric{ID: id, MType: "gauge", Value: &value}
 	if key != "" {
@@ -127,26 +136,11 @@ func EncodeServerResponse(resp structs.ServerResponse, compress bool, asText boo
 }
 
 func EncodeMetrics(store structs.Storage) ([]byte, error) {
-	metrics := structs.Metrics{}
-	counters, err := store.GetAllCounters()
+	metrics, err := store.GetMetrics()
 	if err != nil {
-		e := fmt.Errorf("failed to get all counters: %s", err.Error())
+		e := fmt.Errorf("failed to get metrics: %s", err.Error())
 		return []byte{}, e
 	}
-	gauges, err := store.GetAllGauges()
-	if err != nil {
-		e := fmt.Errorf("failed to get all gauges: %s", err.Error())
-		return []byte{}, e
-	}
-	for k := range counters {
-		d := counters[k]
-		metrics = append(metrics, structs.Metric{ID: k, Delta: &d, MType: "counter"})
-	}
-	for k := range gauges {
-		v := gauges[k]
-		metrics = append(metrics, structs.Metric{ID: k, MType: "gauge", Value: &v})
-	}
-
 	json, err := json.Marshal(metrics)
 	if err != nil {
 		return []byte{}, err

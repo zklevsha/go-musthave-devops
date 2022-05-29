@@ -43,8 +43,6 @@ func (m *Metric) AsText() string {
 	return str
 }
 
-type Metrics []Metric
-
 type Response struct {
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
@@ -189,11 +187,29 @@ func (s *MemoryStorage) Init() error {
 	return nil
 }
 
+func (s *MemoryStorage) GetMetrics() ([]Metric, error) {
+	var metrics = []Metric{}
+	s.countersMx.RLock()
+	for k, v := range s.counters {
+		metrics = append(metrics, Metric{ID: k, MType: "counter", Delta: &v})
+	}
+	s.countersMx.RUnlock()
+
+	s.gaugesMx.RLock()
+	for k, v := range s.gauges {
+		metrics = append(metrics, Metric{ID: k, MType: "gauge", Value: &v})
+	}
+	s.gaugesMx.RUnlock()
+	return metrics, nil
+
+}
+
 type Storage interface {
 	GetGauge(metricName string) (float64, error)
 	SetGauge(metricName string, metricValue float64) error
 	GetAllGauges() (map[string]float64, error)
 	GetCounter(metricName string) (int64, error)
+	GetMetrics() ([]Metric, error)
 	SetCounter(metricName string, metricValue int64) error
 	IncreaseCounter(metricName string, metricValue int64) error
 	GetAllCounters() (map[string]int64, error)

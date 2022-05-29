@@ -334,3 +334,48 @@ func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
 	}
 	return nil
 }
+
+func (d *DBConnector) GetMetrics() ([]structs.Metric, error) {
+	err := d.checkInit()
+	if err != nil {
+		return []structs.Metric{}, err
+	}
+	conn, err := d.Pool.Acquire(d.Ctx)
+	if err != nil {
+		return []structs.Metric{}, fmt.Errorf("failed to acquire connection: %s", err.Error())
+	}
+	defer conn.Release()
+
+	var metrics []structs.Metric
+	sqlCounters := `SELECT metric_id, metric_value FROM counters`
+	sqlGauges := `SELECT metric_id, metric_value FROM gauges`
+
+	rows, err := conn.Query(d.Ctx, sqlCounters)
+	if err != nil {
+		return []structs.Metric{}, fmt.Errorf("failed query counters table %s", err.Error())
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var metric structs.Metric
+		if err := rows.Scan(&metric.ID, &metric.Delta); err != nil {
+			return []structs.Metric{}, fmt.Errorf("failed to convert counters row to Metric: %s", err.Error())
+		}
+		metrics = append(metrics, metric)
+	}
+
+	rows, err = conn.Query(d.Ctx, sqlGauges)
+	if err != nil {
+		return []structs.Metric{}, fmt.Errorf("failed query gauges table %s", err.Error())
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var metric structs.Metric
+		if err := rows.Scan(&metric.ID, &metric.Value); err != nil {
+			return []structs.Metric{}, fmt.Errorf("failed to convert gauges row to Metric: %s", err.Error())
+		}
+		metrics = append(metrics, metric)
+	}
+	return metrics, nil
+}

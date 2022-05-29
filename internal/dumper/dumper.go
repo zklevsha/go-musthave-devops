@@ -31,7 +31,7 @@ func restore(filePath string, store structs.Storage) error {
 	if err != nil {
 		return fmt.Errorf("failed to open dump file %s: %s", filePath, err.Error())
 	}
-	metrics := structs.Metrics{}
+	metrics := []structs.Metric{}
 	err = json.Unmarshal(jsonFile, &metrics)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshall json to serializer.Metrics: %s", err.Error())
