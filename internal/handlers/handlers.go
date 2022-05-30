@@ -21,48 +21,6 @@ type Handlers struct {
 	storage structs.Storage
 }
 
-func (h *Handlers) getMetric(m structs.Metric) (structs.Metric, int, error) {
-
-	switch m.MType {
-	case "counter":
-		v, err := h.storage.GetCounter(m.ID)
-		if err != nil {
-			e := fmt.Errorf("failed to get  %s: %s", m.ID, err.Error())
-			return m, 404, e
-		}
-		m.Delta = &v
-	case "gauge":
-		v, err := h.storage.GetGauge(m.ID)
-		if err != nil {
-			e := fmt.Errorf("failed to get  %s: %s", m.ID, err.Error())
-			return m, 404, e
-		}
-		m.Value = &v
-	default:
-		e := fmt.Errorf("failed to get %s: unknown metric type: %s", m.ID, m.MType)
-		return m, 500, e
-
-	}
-	return m, http.StatusOK, nil
-}
-
-func (h *Handlers) updateMetric(m structs.Metric) error {
-	switch m.MType {
-	case "counter":
-		log.Printf("INFO updating metric: id:%s, type:counter, delta:%d \n",
-			m.ID, *m.Delta)
-		err := h.storage.IncreaseCounter(m.ID, *m.Delta)
-		return err
-	case "gauge":
-		log.Printf("INFO updating metric: id:%s, type:gauge, value:%f \n",
-			m.ID, *m.Value)
-		err := h.storage.SetGauge(m.ID, *m.Value)
-		return err
-	default:
-		return fmt.Errorf("unknown metric type: %s", m.MType)
-	}
-}
-
 func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
 	resp structs.ServerResponse, compress bool, asText bool) {
 	responseBody, err := serializer.EncodeServerResponse(resp, compress, asText, h.key)
@@ -108,10 +66,10 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.updateMetric(m)
+	statusCode, err = h.storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.AsText(), err.Error())
-		h.sendResponse(w, http.StatusInternalServerError,
+		h.sendResponse(w, statusCode,
 			&structs.Response{Error: e},
 			сompress, asText)
 		return
@@ -174,10 +132,10 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = h.updateMetric(m)
+	statusCode, err := h.storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.ID, err.Error())
-		h.sendResponse(w, http.StatusInternalServerError,
+		h.sendResponse(w, statusCode,
 			&structs.Response{Error: e},
 			compressResponse, asText)
 		return
@@ -222,11 +180,11 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	log.Println("INFO updating metrics batch")
-	err = h.storage.UpdateMetrics(metrics)
+	statusCode, err := h.storage.UpdateMetrics(metrics)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric batch: %s", err.Error())
 		log.Printf("ERROR %s", e)
-		h.sendResponse(w, http.StatusInternalServerError, &structs.Response{Error: e},
+		h.sendResponse(w, statusCode, &structs.Response{Error: e},
 			compressResponse, responseAsText)
 		return
 	}
@@ -247,7 +205,7 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 		h.sendResponse(w, statusCode, &structs.Response{Error: e}, сompress, asText)
 		return
 	}
-	metric, statusCode, err := h.getMetric(m)
+	metric, statusCode, err := h.storage.GetMetric(m)
 	if err != nil {
 		log.Printf(" WARN failed to get metric: %s", err.Error())
 		h.sendResponse(w, statusCode, &structs.Response{Error: err.Error()}, сompress, asText)
@@ -291,7 +249,7 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 			compressResponse, responseAsText)
 		return
 	}
-	metric, statusCode, err := h.getMetric(m)
+	metric, statusCode, err := h.storage.GetMetric(m)
 
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())

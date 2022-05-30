@@ -136,7 +136,7 @@ func EncodeServerResponse(resp structs.ServerResponse, compress bool, asText boo
 }
 
 func EncodeMetrics(store structs.Storage) ([]byte, error) {
-	metrics, err := store.GetMetrics()
+	metrics, _, err := store.GetMetrics()
 	if err != nil {
 		e := fmt.Errorf("failed to get metrics: %s", err.Error())
 		return []byte{}, e

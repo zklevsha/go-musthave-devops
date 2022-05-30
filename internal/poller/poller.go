@@ -9,7 +9,13 @@ import (
 	"time"
 
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
+	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
+
+func cUint64(i uint64) *float64 {
+	res := float64(i)
+	return &res
+}
 
 func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 	defer wg.Done()
@@ -23,36 +29,43 @@ func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 			log.Println("INFO polling data")
 			var rtm runtime.MemStats
 			runtime.ReadMemStats(&rtm)
-			storage.Agent.SetGauge("Alloc", float64(rtm.Alloc))
-			storage.Agent.SetGauge("BuckHashSys", float64(rtm.BuckHashSys))
-			storage.Agent.SetGauge("Frees", float64(rtm.Frees))
-			storage.Agent.SetGauge("GCCPUFraction", float64(rtm.GCCPUFraction))
-			storage.Agent.SetGauge("GCSys", float64(rtm.GCSys))
-			storage.Agent.SetGauge("HeapAlloc", float64(rtm.HeapAlloc))
-			storage.Agent.SetGauge("HeapIdle", float64(rtm.HeapIdle))
-			storage.Agent.SetGauge("HeapInuse", float64(rtm.HeapInuse))
-			storage.Agent.SetGauge("HeapObjects", float64(rtm.HeapObjects))
-			storage.Agent.SetGauge("HeapReleased", float64(rtm.HeapReleased))
-			storage.Agent.SetGauge("HeapSys", float64(rtm.HeapSys))
-			storage.Agent.SetGauge("LastGC", float64(rtm.LastGC))
-			storage.Agent.SetGauge("Lookups", float64(rtm.Lookups))
-			storage.Agent.SetGauge("MCacheInuse", float64(rtm.MCacheInuse))
-			storage.Agent.SetGauge("MCacheSys", float64(rtm.MCacheSys))
-			storage.Agent.SetGauge("MSpanSys", float64(rtm.MSpanSys))
-			storage.Agent.SetGauge("Mallocs", float64(rtm.Mallocs))
-			storage.Agent.SetGauge("NextGC", float64(rtm.NextGC))
-			storage.Agent.SetGauge("NumForcedGC", float64(rtm.NumForcedGC))
-			storage.Agent.SetGauge("NextGC", float64(rtm.NumGC))
-			storage.Agent.SetGauge("OtherSys", float64(rtm.OtherSys))
-			storage.Agent.SetGauge("PauseTotalNs", float64(rtm.PauseTotalNs))
-			storage.Agent.SetGauge("StackInuse", float64(rtm.StackInuse))
-			storage.Agent.SetGauge("StackSys", float64(rtm.StackSys))
-			storage.Agent.SetGauge("Sys", float64(rtm.Sys))
-			storage.Agent.SetGauge("TotalAlloc", float64(rtm.TotalAlloc))
-			storage.Agent.SetGauge("RandomValue", rand.Float64())
-			storage.Agent.SetGauge("MSpanInuse", float64(rtm.MSpanInuse))
-			storage.Agent.SetGauge("NumGC", float64(rtm.NumGC))
-			storage.Agent.IncreaseCounter("PollCount", 1)
+			random := rand.Float64()
+			pollCount := int64(1)
+			var metrics = []structs.Metric{
+				{MType: "gauge", ID: "Alloc", Value: cUint64(rtm.Alloc)},
+				{MType: "gauge", ID: "BuckHashSys", Value: cUint64(rtm.BuckHashSys)},
+				{MType: "gauge", ID: "Frees", Value: cUint64(rtm.Frees)},
+				{MType: "gauge", ID: "GCCPUFraction", Value: &rtm.GCCPUFraction},
+				{MType: "gauge", ID: "GCSys", Value: cUint64(rtm.GCSys)},
+				{MType: "gauge", ID: "HeapAlloc", Value: cUint64(rtm.HeapAlloc)},
+				{MType: "gauge", ID: "HeapIdle", Value: cUint64(rtm.HeapIdle)},
+				{MType: "gauge", ID: "HeapInuse", Value: cUint64(rtm.HeapInuse)},
+				{MType: "gauge", ID: "HeapObjects", Value: cUint64(rtm.HeapObjects)},
+				{MType: "gauge", ID: "HeapReleased", Value: cUint64(rtm.HeapReleased)},
+				{MType: "gauge", ID: "HeapSys", Value: cUint64(rtm.HeapSys)},
+				{MType: "gauge", ID: "LastGC", Value: cUint64(rtm.LastGC)},
+				{MType: "gauge", ID: "Lookups", Value: cUint64(rtm.Lookups)},
+				{MType: "gauge", ID: "MCacheInuse", Value: cUint64(rtm.MCacheInuse)},
+				{MType: "gauge", ID: "MCacheSys", Value: cUint64(rtm.MCacheSys)},
+				{MType: "gauge", ID: "MSpanSys", Value: cUint64(rtm.MSpanSys)},
+				{MType: "gauge", ID: "Mallocs", Value: cUint64(rtm.Mallocs)},
+				{MType: "gauge", ID: "NumForcedGC", Value: cUint64(uint64(rtm.NumForcedGC))},
+				{MType: "gauge", ID: "NextGC", Value: cUint64(rtm.NextGC)},
+				{MType: "gauge", ID: "OtherSys", Value: cUint64(rtm.OtherSys)},
+				{MType: "gauge", ID: "PauseTotalNs", Value: cUint64(rtm.PauseTotalNs)},
+				{MType: "gauge", ID: "StackInuse", Value: cUint64(rtm.StackInuse)},
+				{MType: "gauge", ID: "StackSys", Value: cUint64(rtm.StackSys)},
+				{MType: "gauge", ID: "Sys", Value: cUint64(rtm.Sys)},
+				{MType: "gauge", ID: "TotalAlloc", Value: cUint64(rtm.TotalAlloc)},
+				{MType: "gauge", ID: "RandomValue", Value: &random},
+				{MType: "gauge", ID: "MSpanInuse", Value: cUint64(rtm.MSpanInuse)},
+				{MType: "gauge", ID: "NumGC", Value: cUint64(uint64(rtm.NumGC))},
+				{MType: "counter", ID: "PollCount", Delta: &pollCount},
+			}
+			_, err := storage.Agent.UpdateMetrics(metrics)
+			if err != nil {
+				log.Printf("ERROR poller failed to poll metrics: %s", err.Error())
+			}
 		}
 	}
 }
