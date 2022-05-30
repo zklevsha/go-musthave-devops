@@ -18,7 +18,7 @@ import (
 
 type Handlers struct {
 	key     string
-	storage structs.Storage
+	Storage structs.Storage
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
@@ -52,13 +52,14 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		e := "delta attribute is not set"
 		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
 			сompress, asText)
+		return
 	}
 	if m.MType == "gauge" && m.Value == nil {
 		e := "gauge attribute is not set"
 		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
 			сompress, asText)
+		return
 	}
-
 	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
 		h.sendResponse(w, http.StatusBadRequest,
 			&structs.Response{Error: "invalid hash value"},
@@ -66,7 +67,7 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statusCode, err = h.storage.UpdateMetric(m)
+	statusCode, err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.AsText(), err.Error())
 		h.sendResponse(w, statusCode,
@@ -132,7 +133,7 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	statusCode, err := h.storage.UpdateMetric(m)
+	statusCode, err := h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.ID, err.Error())
 		h.sendResponse(w, statusCode,
@@ -180,7 +181,7 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	log.Println("INFO updating metrics batch")
-	statusCode, err := h.storage.UpdateMetrics(metrics)
+	statusCode, err := h.Storage.UpdateMetrics(metrics)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric batch: %s", err.Error())
 		log.Printf("ERROR %s", e)
@@ -205,7 +206,7 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 		h.sendResponse(w, statusCode, &structs.Response{Error: e}, сompress, asText)
 		return
 	}
-	metric, statusCode, err := h.storage.GetMetric(m)
+	metric, statusCode, err := h.Storage.GetMetric(m)
 	if err != nil {
 		log.Printf(" WARN failed to get metric: %s", err.Error())
 		h.sendResponse(w, statusCode, &structs.Response{Error: err.Error()}, сompress, asText)
@@ -249,7 +250,7 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 			compressResponse, responseAsText)
 		return
 	}
-	metric, statusCode, err := h.storage.GetMetric(m)
+	metric, statusCode, err := h.Storage.GetMetric(m)
 
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
@@ -278,7 +279,7 @@ func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
 	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
-	err := h.storage.Avaliable()
+	err := h.Storage.Avaliable()
 	if err != nil {
 		h.sendResponse(w, http.StatusInternalServerError,
 			&structs.Response{Error: fmt.Sprintf("DB is down: %s", err.Error())},
@@ -294,7 +295,7 @@ func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
 
 func GetHandler(c config.ServerConfig, ctx context.Context, store structs.Storage) http.Handler {
 	r := mux.NewRouter()
-	h := Handlers{key: c.Key, storage: store}
+	h := Handlers{key: c.Key, Storage: store}
 	r.HandleFunc("/", h.rootHandrer)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
