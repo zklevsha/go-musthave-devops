@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
-	"github.com/zklevsha/go-musthave-devops/internal/storage"
+	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
-func dump(filePath string, store storage.Storage) error {
+func dump(filePath string, store structs.Storage) error {
 	encodedMetrics, err := serializer.EncodeMetrics(store)
 	if err != nil {
 		return fmt.Errorf("failed to convert metrics to json: %s", err.Error())
@@ -26,12 +26,12 @@ func dump(filePath string, store storage.Storage) error {
 	return nil
 }
 
-func restore(filePath string, store storage.Storage) error {
+func restore(filePath string, store structs.Storage) error {
 	jsonFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to open dump file %s: %s", filePath, err.Error())
 	}
-	metrics := serializer.Metrics{}
+	metrics := []structs.Metric{}
 	err = json.Unmarshal(jsonFile, &metrics)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshall json to serializer.Metrics: %s", err.Error())
@@ -48,7 +48,7 @@ func restore(filePath string, store storage.Storage) error {
 	return nil
 }
 
-func dumpData(storeFile string, store storage.Storage) {
+func dumpData(storeFile string, store structs.Storage) {
 	log.Println("INFO dump dumping data to disk")
 	err := dump(storeFile, store)
 	if err != nil {
@@ -59,7 +59,7 @@ func dumpData(storeFile string, store storage.Storage) {
 
 }
 
-func RestoreData(storeFile string, store storage.Storage) {
+func RestoreData(storeFile string, store structs.Storage) {
 	log.Println("INFO dump restore data from disk")
 	err := restore(storeFile, store)
 	if err != nil {
@@ -70,7 +70,7 @@ func RestoreData(storeFile string, store storage.Storage) {
 }
 
 func Start(ctx context.Context, wg *sync.WaitGroup,
-	storeInterval time.Duration, storeFile string, store storage.Storage) {
+	storeInterval time.Duration, storeFile string, store structs.Storage) {
 	log.Println("INFO dump starting")
 	defer wg.Done()
 	ticker := time.NewTicker(storeInterval)

@@ -14,7 +14,7 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/db"
 	"github.com/zklevsha/go-musthave-devops/internal/dumper"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
-	"github.com/zklevsha/go-musthave-devops/internal/storage"
+	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
 var wg sync.WaitGroup
@@ -35,7 +35,7 @@ func main() {
 	log.Println(logMsg)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	var s storage.Storage
+	var s structs.Storage
 	if config.UseDB {
 		s = &db.DBConnector{DSN: config.DSN, Ctx: ctx}
 		err := s.Init()
@@ -44,7 +44,7 @@ func main() {
 		}
 		defer s.Close()
 	} else {
-		s = storage.NewMemoryStorage()
+		s = structs.NewMemoryStorage()
 		if config.Restore {
 			dumper.RestoreData(config.StoreFile, s)
 		}
