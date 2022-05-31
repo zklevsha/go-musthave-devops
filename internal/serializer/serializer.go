@@ -59,8 +59,7 @@ func DecodeURL(r *http.Request) (structs.Metric, error) {
 	case "counter":
 		i, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
-			e := fmt.Errorf("failed to convert %s (%s) to int64: %s", metricID, metricValue, err.Error())
-			return structs.Metric{}, e
+			return structs.Metric{}, structs.ErrMetricBadAttrValue
 		} else {
 			m := structs.Metric{ID: metricID, MType: metricType, Delta: &i}
 			return m, nil
@@ -68,8 +67,7 @@ func DecodeURL(r *http.Request) (structs.Metric, error) {
 	case "gauge":
 		f, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
-			e := fmt.Errorf("failed to convert %s (%s) to float64: %s", metricID, metricValue, err.Error())
-			return structs.Metric{}, e
+			return structs.Metric{}, structs.ErrMetricBadAttrValue
 		} else {
 			m := structs.Metric{ID: metricID, MType: metricType, Value: &f}
 			return m, nil

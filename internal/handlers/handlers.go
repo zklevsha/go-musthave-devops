@@ -21,7 +21,9 @@ func getErrStatusCode(err error) int {
 	switch {
 	case errors.Is(err, structs.ErrMetricNotFound):
 		return http.StatusNotFound
-	case errors.Is(err, structs.ErrMetricBadType) || errors.Is(err, structs.ErrMetricNullAttr):
+	case errors.Is(err, structs.ErrMetricBadType) ||
+		errors.Is(err, structs.ErrMetricNullAttr) ||
+		errors.Is(err, structs.ErrMetricBadAttrValue):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
