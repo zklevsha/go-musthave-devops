@@ -19,8 +19,7 @@ func DecodeBody(body io.Reader) (structs.Metric, error) {
 		return structs.Metric{}, err
 	}
 	if m.MType != "counter" && m.MType != "gauge" {
-		err = fmt.Errorf("uknown metric type: %s", m.MType)
-		return m, err
+		return m, structs.ErrMetricBadType
 	}
 
 	return m, err
@@ -35,49 +34,48 @@ func DecodeBodyBatch(body io.Reader) ([]structs.Metric, error) {
 	// Data checking
 	for _, m := range metrics {
 		if m.MType != "counter" && m.MType != "gauge" {
-			return []structs.Metric{}, fmt.Errorf("metric %s has unknown type: %s", m.ID, m.MType)
+			return []structs.Metric{}, structs.ErrMetricBadType
 		}
 		if m.MType == "counter" && m.Delta == nil {
-			return []structs.Metric{}, fmt.Errorf("delta attirbute is not set for counter %s", m.ID)
+			return []structs.Metric{}, structs.ErrMetricNullAttr
 		}
 		if m.MType == "gauge" && m.Value == nil {
-			return []structs.Metric{}, fmt.Errorf("value attribute is not set for gauge %s", m.ID)
+			return []structs.Metric{}, structs.ErrMetricNullAttr
 		}
 	}
 	return metrics, nil
 }
 
-func DecodeURL(r *http.Request) (structs.Metric, int, error) {
+func DecodeURL(r *http.Request) (structs.Metric, error) {
 	v := mux.Vars(r)
 	metricID := v["metricID"]
 	metricType := v["metricType"]
 	metricValue := v["metricValue"]
 
 	if len(metricValue) == 0 {
-		return structs.Metric{ID: metricID, MType: metricType}, 200, nil
+		return structs.Metric{ID: metricID, MType: metricType}, nil
 	}
 	switch metricType {
 	case "counter":
 		i, err := strconv.ParseInt(metricValue, 10, 64)
 		if err != nil {
 			e := fmt.Errorf("failed to convert %s (%s) to int64: %s", metricID, metricValue, err.Error())
-			return structs.Metric{}, http.StatusBadRequest, e
+			return structs.Metric{}, e
 		} else {
 			m := structs.Metric{ID: metricID, MType: metricType, Delta: &i}
-			return m, http.StatusOK, nil
+			return m, nil
 		}
 	case "gauge":
 		f, err := strconv.ParseFloat(metricValue, 64)
 		if err != nil {
 			e := fmt.Errorf("failed to convert %s (%s) to float64: %s", metricID, metricValue, err.Error())
-			return structs.Metric{}, http.StatusBadRequest, e
+			return structs.Metric{}, e
 		} else {
 			m := structs.Metric{ID: metricID, MType: metricType, Value: &f}
-			return m, http.StatusOK, nil
+			return m, nil
 		}
 	default:
-		e := fmt.Errorf("unknown metric type %s", metricType)
-		return structs.Metric{}, http.StatusNotImplemented, e
+		return structs.Metric{}, structs.ErrMetricBadType
 	}
 }
 
@@ -136,7 +134,7 @@ func EncodeServerResponse(resp structs.ServerResponse, compress bool, asText boo
 }
 
 func EncodeMetrics(store structs.Storage) ([]byte, error) {
-	metrics, _, err := store.GetMetrics()
+	metrics, err := store.GetMetrics()
 	if err != nil {
 		e := fmt.Errorf("failed to get metrics: %s", err.Error())
 		return []byte{}, e

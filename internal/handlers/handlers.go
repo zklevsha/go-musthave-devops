@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,6 +16,17 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
+
+func getErrStatusCode(err error) int {
+	switch {
+	case errors.Is(err, structs.ErrMetricNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, structs.ErrMetricBadType) || errors.Is(err, structs.ErrMetricNullAttr):
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
+}
 
 type Handlers struct {
 	key     string
@@ -42,9 +54,9 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
 	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
-	m, statusCode, err := serializer.DecodeURL(r)
+	m, err := serializer.DecodeURL(r)
 	if err != nil {
-		h.sendResponse(w, statusCode, &structs.Response{Error: err.Error()}, сompress, asText)
+		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
 
@@ -67,10 +79,10 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statusCode, err = h.Storage.UpdateMetric(m)
+	err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.AsText(), err.Error())
-		h.sendResponse(w, statusCode,
+		h.sendResponse(w, getErrStatusCode(err),
 			&structs.Response{Error: e},
 			сompress, asText)
 		return
@@ -133,10 +145,10 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	statusCode, err := h.Storage.UpdateMetric(m)
+	err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.ID, err.Error())
-		h.sendResponse(w, statusCode,
+		h.sendResponse(w, getErrStatusCode(err),
 			&structs.Response{Error: e},
 			compressResponse, asText)
 		return
@@ -181,11 +193,11 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	log.Println("INFO updating metrics batch")
-	statusCode, err := h.Storage.UpdateMetrics(metrics)
+	err = h.Storage.UpdateMetrics(metrics)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric batch: %s", err.Error())
 		log.Printf("ERROR %s", e)
-		h.sendResponse(w, statusCode, &structs.Response{Error: e},
+		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: e},
 			compressResponse, responseAsText)
 		return
 	}
@@ -200,16 +212,16 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
 	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
 
-	m, statusCode, err := serializer.DecodeURL(r)
+	m, err := serializer.DecodeURL(r)
 	if err != nil {
 		e := fmt.Sprintf("failed to decode url: %s", err.Error())
-		h.sendResponse(w, statusCode, &structs.Response{Error: e}, сompress, asText)
+		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: e}, сompress, asText)
 		return
 	}
-	metric, statusCode, err := h.Storage.GetMetric(m)
+	metric, err := h.Storage.GetMetric(m)
 	if err != nil {
 		log.Printf(" WARN failed to get metric: %s", err.Error())
-		h.sendResponse(w, statusCode, &structs.Response{Error: err.Error()}, сompress, asText)
+		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
 
@@ -250,12 +262,12 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 			compressResponse, responseAsText)
 		return
 	}
-	metric, statusCode, err := h.Storage.GetMetric(m)
+	metric, err := h.Storage.GetMetric(m)
 
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
 		log.Printf("WARN %s", e)
-		h.sendResponse(w, statusCode, &structs.Response{Error: e},
+		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: e},
 			compressResponse, responseAsText)
 		return
 	}

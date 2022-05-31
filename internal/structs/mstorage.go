@@ -1,9 +1,7 @@
 package structs
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"sync"
 )
 
@@ -14,7 +12,7 @@ type MemoryStorage struct {
 	gaugesMx   sync.RWMutex
 }
 
-func (s *MemoryStorage) GetMetric(m Metric) (Metric, int, error) {
+func (s *MemoryStorage) GetMetric(m Metric) (Metric, error) {
 	switch m.MType {
 	case "counter":
 		s.countersMx.RLock()
@@ -22,11 +20,10 @@ func (s *MemoryStorage) GetMetric(m Metric) (Metric, int, error) {
 		s.countersMx.RUnlock()
 		if ok {
 			m.Delta = &v
-			return m, http.StatusOK, nil
+			return m, nil
 		} else {
-			e := fmt.Errorf("counter metric %s does not exists", m.ID)
-			log.Printf("ERROR: %s", e.Error())
-			return Metric{}, http.StatusNotFound, e
+			log.Printf("WARN: counter metric %s was not found", m.ID)
+			return Metric{}, ErrMetricNotFound
 		}
 	case "gauge":
 		s.gaugesMx.RLock()
@@ -34,20 +31,18 @@ func (s *MemoryStorage) GetMetric(m Metric) (Metric, int, error) {
 		s.gaugesMx.RUnlock()
 		if ok {
 			m.Value = &v
-			return m, http.StatusOK, nil
+			return m, nil
 		} else {
-			e := fmt.Errorf("gauge metric %s does not exists", m.ID)
-			log.Printf("ERROR: %s", e.Error())
-			return Metric{}, http.StatusNotFound, e
+			log.Printf("WARN: gauge metric %s does not exists", m.ID)
+			return Metric{}, ErrMetricNotFound
 		}
 	default:
-		e := fmt.Errorf("cant get %s. Metric has unknown type: %s", m.ID, m.MType)
-		log.Printf("ERROR: %s", e.Error())
-		return Metric{}, http.StatusBadRequest, e
+		log.Printf("WARN:cant get %s. Metric has unknown type: %s", m.ID, m.MType)
+		return Metric{}, ErrMetricBadType
 	}
 }
 
-func (s *MemoryStorage) GetMetrics() ([]Metric, int, error) {
+func (s *MemoryStorage) GetMetrics() ([]Metric, error) {
 	var metrics = []Metric{}
 	s.countersMx.RLock()
 	for k, v := range s.counters {
@@ -60,11 +55,11 @@ func (s *MemoryStorage) GetMetrics() ([]Metric, int, error) {
 		metrics = append(metrics, Metric{ID: k, MType: "gauge", Value: &v})
 	}
 	s.gaugesMx.RUnlock()
-	return metrics, http.StatusOK, nil
+	return metrics, nil
 
 }
 
-func (s *MemoryStorage) UpdateMetric(m Metric) (int, error) {
+func (s *MemoryStorage) UpdateMetric(m Metric) error {
 	switch m.MType {
 	case "counter":
 		s.countersMx.Lock()
@@ -76,21 +71,20 @@ func (s *MemoryStorage) UpdateMetric(m Metric) (int, error) {
 		s.gauges[m.ID] = *m.Value
 		s.gaugesMx.Unlock()
 	default:
-		e := fmt.Errorf("cant update %s. Metric has unknown type: %s", m.ID, m.MType)
-		log.Printf("ERROR: %s", e.Error())
-		return http.StatusBadRequest, e
+		log.Printf("ERROR: cant update %s. Metric has unknown type: %s", m.ID, m.MType)
+		return ErrMetricBadType
 	}
-	return http.StatusOK, nil
+	return nil
 }
 
-func (s *MemoryStorage) UpdateMetrics(metrics []Metric) (int, error) {
+func (s *MemoryStorage) UpdateMetrics(metrics []Metric) error {
 	for _, m := range metrics {
-		statusCode, err := s.UpdateMetric(m)
+		err := s.UpdateMetric(m)
 		if err != nil {
-			return statusCode, err
+			return err
 		}
 	}
-	return http.StatusOK, nil
+	return nil
 }
 
 func (s *MemoryStorage) ResetCounter(ID string) error {
@@ -100,7 +94,7 @@ func (s *MemoryStorage) ResetCounter(ID string) error {
 		s.countersMx.Unlock()
 		return nil
 	} else {
-		return fmt.Errorf("counter metric %s does not exists", ID)
+		return ErrMetricNotFound
 	}
 
 }

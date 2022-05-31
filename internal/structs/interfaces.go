@@ -6,10 +6,10 @@ type ServerResponse interface {
 }
 
 type Storage interface {
-	GetMetric(metric Metric) (Metric, int, error)
-	GetMetrics() ([]Metric, int, error)
-	UpdateMetric(metric Metric) (int, error)
-	UpdateMetrics(metrics []Metric) (int, error)
+	GetMetric(metric Metric) (Metric, error)
+	GetMetrics() ([]Metric, error)
+	UpdateMetric(metric Metric) error
+	UpdateMetrics(metrics []Metric) error
 	ResetCounter(ID string) error
 	Avaliable() error
 	Close()

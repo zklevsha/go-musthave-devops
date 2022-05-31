@@ -62,7 +62,7 @@ func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 				{MType: "gauge", ID: "NumGC", Value: cUint64(uint64(rtm.NumGC))},
 				{MType: "counter", ID: "PollCount", Delta: &pollCount},
 			}
-			_, err := storage.Agent.UpdateMetrics(metrics)
+			err := storage.Agent.UpdateMetrics(metrics)
 			if err != nil {
 				log.Printf("ERROR poller failed to poll metrics: %s", err.Error())
 			}

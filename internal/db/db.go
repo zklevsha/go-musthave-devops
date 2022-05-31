@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -55,28 +54,27 @@ func (d *DBConnector) Avaliable() error {
 	return d.Pool.Ping(d.Ctx)
 }
 
-func (d *DBConnector) getGauge(metricID string) (float64, int, error) {
+func (d *DBConnector) getGauge(metricID string) (float64, error) {
 	err := d.checkInit()
 	if err != nil {
-		return -1, http.StatusInternalServerError, err
+		return -1, err
 	}
 	var gauge float64
 	sql := `SELECT metric_value FROM gauges WHERE metric_id=$1;`
 	conn, err := d.Pool.Acquire(d.Ctx)
 	if err != nil {
-		return -1, http.StatusInternalServerError,
-			fmt.Errorf("failed to acquire connection: %s", err.Error())
+		return -1, fmt.Errorf("failed to acquire connection: %s", err.Error())
 	}
 	defer conn.Release()
 	row := conn.QueryRow(d.Ctx, sql, metricID)
 	switch err := row.Scan(&gauge); err {
 	case pgx.ErrNoRows:
-		return -1, http.StatusNotFound, fmt.Errorf("no metric %s was found", metricID)
+		return -1, structs.ErrMetricNotFound
 	case nil:
-		return gauge, http.StatusOK, nil
+		return gauge, nil
 	default:
 		e := fmt.Errorf("unknown error while quering metric %s: %s", metricID, err.Error())
-		return -1, http.StatusInternalServerError, e
+		return -1, e
 	}
 }
 
@@ -136,15 +134,14 @@ func (d *DBConnector) getAllGauges() (map[string]float64, error) {
 	return gauges, nil
 }
 
-func (d *DBConnector) getCounter(metricID string) (int64, int, error) {
+func (d *DBConnector) getCounter(metricID string) (int64, error) {
 	err := d.checkInit()
 	if err != nil {
-		return -1, http.StatusInternalServerError, err
+		return -1, err
 	}
 	conn, err := d.Pool.Acquire(d.Ctx)
 	if err != nil {
-		return -1, http.StatusInternalServerError,
-			fmt.Errorf("failed to acquire connection: %s", err.Error())
+		return -1, fmt.Errorf("failed to acquire connection: %s", err.Error())
 	}
 	defer conn.Release()
 	var counter int64
@@ -152,13 +149,12 @@ func (d *DBConnector) getCounter(metricID string) (int64, int, error) {
 	row := conn.QueryRow(d.Ctx, sql, metricID)
 	switch err := row.Scan(&counter); err {
 	case pgx.ErrNoRows:
-		e := fmt.Errorf("no metric %s was found", metricID)
-		return -1, http.StatusNotFound, e
+		return -1, structs.ErrMetricNotFound
 	case nil:
-		return counter, http.StatusOK, nil
+		return counter, nil
 	default:
 		e := fmt.Errorf("unknown error while quering metric %s: %s", metricID, err.Error())
-		return -1, http.StatusNotFound, e
+		return -1, e
 	}
 }
 
@@ -265,15 +261,14 @@ func (d *DBConnector) CreateTables() error {
 	return nil
 }
 
-func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) (int, error) {
+func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
 	err := d.checkInit()
 	if err != nil {
-		return http.StatusInternalServerError, err
+		return err
 	}
 	conn, err := d.Pool.Acquire(d.Ctx)
 	if err != nil {
-		return http.StatusInternalServerError,
-			fmt.Errorf("failed to acquire connection: %s", err.Error())
+		return fmt.Errorf("failed to acquire connection: %s", err.Error())
 	}
 	defer conn.Release()
 
@@ -290,7 +285,7 @@ func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) (int, error) {
 					UPDATE SET metric_value = $2 WHERE gauges.metric_id = $1;`
 	tx, err := conn.Begin(d.Ctx)
 	if err != nil {
-		return http.StatusInternalServerError, fmt.Errorf("failed to start transaction: %s", err.Error())
+		return fmt.Errorf("failed to start transaction: %s", err.Error())
 	}
 	// Rollback is safe to call even if the tx is already closed, so if
 	// the tx commits successfully, this is a no-op
@@ -301,44 +296,36 @@ func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) (int, error) {
 		case "counter":
 			_, err := tx.Exec(d.Ctx, sqlCounters, m.ID, m.Delta)
 			if err != nil {
-				return http.StatusInternalServerError,
-					fmt.Errorf("failed to update counter %s(%d): %s",
-						m.ID, *m.Delta, err.Error())
+				return fmt.Errorf("failed to update counter %s(%d): %s", m.ID, *m.Delta, err.Error())
 			}
 		case "gauge":
 			_, err := tx.Exec(d.Ctx, sqlGauges, m.ID, m.Value)
 			if err != nil {
-				return http.StatusInternalServerError,
-					fmt.Errorf("failed to update gauge %s(%f): %s",
-						m.ID, *m.Value, err.Error())
+				return fmt.Errorf("failed to update gauge %s(%f): %s", m.ID, *m.Value, err.Error())
 			}
 		default:
 			// we shuld not be here. Metric type were checked at serializer.DecodeBodyBatch()
-			return http.StatusBadRequest,
-				fmt.Errorf("metric %s has unknown type: %s", m.ID, m.MType)
+			return structs.ErrMetricBadType
 		}
 	}
 	err = tx.Commit(d.Ctx)
 	if err != nil {
-		return http.StatusBadRequest,
-			fmt.Errorf("failed to commit transaction: %s", err.Error())
+		return fmt.Errorf("failed to commit transaction: %s", err.Error())
 	}
-	return http.StatusOK, nil
+	return nil
 }
 
-func (d *DBConnector) GetMetrics() ([]structs.Metric, int, error) {
+func (d *DBConnector) GetMetrics() ([]structs.Metric, error) {
 	var metrics []structs.Metric
 
 	counters, err := d.getAllCounters()
 	if err != nil {
-		return []structs.Metric{}, http.StatusInternalServerError,
-			fmt.Errorf("cant get counters: %s", err.Error())
+		return []structs.Metric{}, fmt.Errorf("cant get counters: %s", err.Error())
 	}
 
 	gauges, err := d.getAllGauges()
 	if err != nil {
-		return []structs.Metric{}, http.StatusInternalServerError,
-			fmt.Errorf("cant get gauges: %s", err.Error())
+		return []structs.Metric{}, fmt.Errorf("cant get gauges: %s", err.Error())
 	}
 
 	for k, v := range counters {
@@ -349,55 +336,54 @@ func (d *DBConnector) GetMetrics() ([]structs.Metric, int, error) {
 		metrics = append(metrics, structs.Metric{ID: k, Value: &v})
 	}
 
-	return metrics, http.StatusOK, nil
+	return metrics, nil
 }
 
-func (d *DBConnector) GetMetric(m structs.Metric) (structs.Metric, int, error) {
+func (d *DBConnector) GetMetric(m structs.Metric) (structs.Metric, error) {
 	switch m.MType {
 	case "counter":
-		c, statusCode, err := d.getCounter(m.ID)
+		c, err := d.getCounter(m.ID)
 		if err != nil {
-			return structs.Metric{}, statusCode, err
+			return structs.Metric{}, err
 		}
 		m.Delta = &c
-		return m, http.StatusOK, nil
+		return m, nil
 	case "gauge":
-		g, statusCode, err := d.getGauge(m.ID)
+		g, err := d.getGauge(m.ID)
 		if err != nil {
-			return structs.Metric{}, statusCode, err
+			return structs.Metric{}, err
 		}
 		m.Value = &g
-		return m, http.StatusOK, nil
+		return m, nil
 	default:
 		e := fmt.Errorf("cant get %s. Metric has unknown type: %s", m.ID, m.MType)
 		log.Printf("ERROR: %s", e.Error())
-		return structs.Metric{}, http.StatusBadRequest, e
+		return structs.Metric{}, e
 	}
 }
 
-func (d *DBConnector) UpdateMetric(m structs.Metric) (int, error) {
+func (d *DBConnector) UpdateMetric(m structs.Metric) error {
 	switch m.MType {
 	case "counter":
 		if m.Delta == nil {
-			return http.StatusBadRequest, fmt.Errorf("delta attribute is not set")
+			return structs.ErrMetricNullAttr
 		}
 		err := d.increaseCounter(m.ID, *m.Delta)
 		if err != nil {
-			return http.StatusInternalServerError, err
+			return err
 		}
 	case "gauge":
 		if m.Value == nil {
-			return http.StatusBadRequest, fmt.Errorf("value attribute is not set")
+			return structs.ErrMetricNullAttr
 		}
 		err := d.setGauge(m.ID, *m.Value)
 		if err != nil {
-			return http.StatusInternalServerError, err
+			return err
 		}
 	default:
-		e := fmt.Errorf("cant get %s. Metric has unknown type: %s", m.ID, m.MType)
-		log.Printf("ERROR: %s", e.Error())
-		return http.StatusBadRequest, e
+		log.Printf("WARN: cant get %s. Metric has unknown type: %s", m.ID, m.MType)
+		return structs.ErrMetricBadType
 	}
-	return http.StatusOK, nil
+	return nil
 
 }

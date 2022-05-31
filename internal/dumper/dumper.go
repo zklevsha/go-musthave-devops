@@ -36,7 +36,7 @@ func restore(filePath string, store structs.Storage) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshall json to serializer.Metrics: %s", err.Error())
 	}
-	_, err = store.UpdateMetrics(metrics)
+	err = store.UpdateMetrics(metrics)
 	if err != nil {
 		return fmt.Errorf("failed to restore metrics: %s", err.Error())
 	}

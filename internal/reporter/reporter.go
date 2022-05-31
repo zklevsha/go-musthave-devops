@@ -50,7 +50,7 @@ func send(url string, body []byte) error {
 
 func reportMetrics(serverSocket string, key string) {
 	url := fmt.Sprintf("http://%s/updates/", serverSocket)
-	metircs, _, err := storage.Agent.GetMetrics()
+	metircs, err := storage.Agent.GetMetrics()
 	if err != nil {
 		log.Printf("ERROR failed to get metrics: %s", err.Error())
 	}
