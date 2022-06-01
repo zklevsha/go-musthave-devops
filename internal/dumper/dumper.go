@@ -36,14 +36,9 @@ func restore(filePath string, store structs.Storage) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshall json to serializer.Metrics: %s", err.Error())
 	}
-	for _, m := range metrics {
-		if m.MType == "gauge" {
-			store.SetGauge(m.ID, *m.Value)
-		} else if m.MType == "counter" {
-			store.SetCounter(m.ID, *m.Delta)
-		} else {
-			log.Printf("WARN Failed to restore %+v: unknown metric type", m)
-		}
+	err = store.UpdateMetrics(metrics)
+	if err != nil {
+		return fmt.Errorf("failed to restore metrics: %s", err.Error())
 	}
 	return nil
 }

@@ -9,11 +9,13 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
+	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
 // TestUpdateMeticHandler
 func TestUpdateMeticHandler(t *testing.T) {
-	h := handlers.Handlers{}
+	h := handlers.Handlers{Storage: structs.NewMemoryStorage()}
+
 	type want struct {
 		code     int
 		response string
