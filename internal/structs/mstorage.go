@@ -46,17 +46,18 @@ func (s *MemoryStorage) GetMetrics() ([]Metric, error) {
 	var metrics = []Metric{}
 	s.countersMx.RLock()
 	for k, v := range s.counters {
-		metrics = append(metrics, Metric{ID: k, MType: "counter", Delta: &v})
+		cDelta := v
+		metrics = append(metrics, Metric{ID: k, MType: "counter", Delta: &cDelta})
 	}
 	s.countersMx.RUnlock()
 
 	s.gaugesMx.RLock()
 	for k, v := range s.gauges {
-		metrics = append(metrics, Metric{ID: k, MType: "gauge", Value: &v})
+		gValue := v
+		metrics = append(metrics, Metric{ID: k, MType: "gauge", Value: &gValue})
 	}
 	s.gaugesMx.RUnlock()
 	return metrics, nil
-
 }
 
 func (s *MemoryStorage) UpdateMetric(m Metric) error {
