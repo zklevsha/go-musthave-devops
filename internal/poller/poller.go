@@ -68,7 +68,7 @@ func getMemoryMetrics() ([]structs.Metric, error) {
 
 }
 
-func getCpuMetrics() ([]structs.Metric, error) {
+func getCPUMetrics() ([]structs.Metric, error) {
 	var metrics = []structs.Metric{}
 	cpu, err := cpu.Percent(0, true)
 	if err != nil {
@@ -111,7 +111,7 @@ func Poll(ctx context.Context, wg *sync.WaitGroup, pollInterval time.Duration) {
 				metrics = append(metrics, memMetrics...)
 			}
 
-			cpuMetrics, err := getCpuMetrics()
+			cpuMetrics, err := getCPUMetrics()
 			if err != nil {
 				fmt.Printf("ERROR failed to poll cpu metrics: %s", err.Error())
 			} else {
