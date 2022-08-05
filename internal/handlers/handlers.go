@@ -1,3 +1,6 @@
+// @title Monitoring API
+// @description Service for storing and retreiving metrics
+
 package handlers
 
 import (
@@ -11,6 +14,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger"
+	_ "github.com/zklevsha/go-musthave-devops/docs"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
 	"github.com/zklevsha/go-musthave-devops/internal/config"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
@@ -211,6 +216,17 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 		compressResponse, responseAsText)
 }
 
+//Geting metric godoc
+// @Summary  Get metric
+// @Description Retreiving metric value
+// @Tags metrics
+// @Produce  json
+// @Param  metricType path string true "metric type" enums(counter,gauge)
+// @Param  metricID path string true "metric id"
+// @Success 200 {object} structs.Metric
+// @Failure 404 {string} string "ErrMetricNotFound"
+// @Failure 501 {string} string "ErrMetricBadType"
+// @Router /value/{metricType}/{metricID} [get]
 func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	сompress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
@@ -232,6 +248,18 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	h.sendResponse(w, http.StatusOK, &metric, сompress, asText)
 }
 
+//GetMetricJSONHandler godoc
+// @Summary Get  metric
+// @Description Retreiving metric value
+// @Tags metrics
+// @Accept json
+// @Produce  json
+// @Produce text/plain
+// @Param order body structs.MetricGet true "Get value for metric"
+// @Success 200 {object} structs.Metric
+// @Failure 404 {object} structs.ServerResponse{error=string} "ErrMetricNotFound"
+// @Failure 501 {object} structs.ServerResponse{error=string} "ErrMetricBadType"
+// @Router /value/ [post]
 func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
@@ -290,6 +318,14 @@ func (h *Handlers) RootHandler(w http.ResponseWriter, r *http.Request) {
 	h.sendResponse(w, http.StatusOK, resp, compress, asText)
 }
 
+// Ping godoc
+// @Summary Ping Database
+// @Description Checking if DB is available
+// @Tags self-health
+// @Produce  json
+// @Produce text/plain
+// @Success 200 {object} structs.Response
+// @Router /ping [get]
 func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
 	compress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
@@ -333,6 +369,9 @@ func GetHandler(c config.ServerConfig, ctx context.Context, store structs.Storag
 		Headers("Content-Type", "application/json")
 
 	r.HandleFunc("/ping", h.Ping)
+
+	// Swagger docs avaialble at /swagger/ endpoint
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	return r
 }

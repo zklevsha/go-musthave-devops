@@ -1,0 +1,135 @@
+definitions:
+  structs.Metric:
+    properties:
+      delta:
+        description: значение метрики в случае передачи counter
+        type: integer
+      hash:
+        description: hmac метрики
+        type: string
+      id:
+        description: имя метрики
+        type: string
+      type:
+        description: параметр, принимающий значение gauge или counter
+        type: string
+      value:
+        description: значение метрики в случае передачи gauge
+        type: number
+    type: object
+  structs.MetricGet:
+    properties:
+      id:
+        description: имя метрики
+        example: CPU
+        type: string
+      type:
+        description: параметр, принимающий значение gauge или counter
+        example: gauge
+        type: string
+    type: object
+  structs.Response:
+    properties:
+      error:
+        type: string
+      hash:
+        type: string
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Service for storing and retreiving metrics
+  title: Monitoring API
+paths:
+  /ping:
+    get:
+      description: Checking if DB is available
+      produces:
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/structs.Response'
+      summary: Ping Database
+      tags:
+      - self-health
+  /value/:
+    post:
+      consumes:
+      - application/json
+      description: Retreiving metric value
+      parameters:
+      - description: Get value for metric
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/structs.MetricGet'
+      produces:
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/structs.Metric'
+        "404":
+          description: ErrMetricNotFound
+          schema:
+            allOf:
+            - {}
+            - properties:
+                error:
+                  type: string
+              type: object
+        "501":
+          description: ErrMetricBadType
+          schema:
+            allOf:
+            - {}
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: Get  metric
+      tags:
+      - metrics
+  /value/{metricType}/{metricID}:
+    get:
+      description: Retreiving metric value
+      parameters:
+      - description: metric type
+        enum:
+        - counter
+        - gauge
+        in: path
+        name: metricType
+        required: true
+        type: string
+      - description: metric id
+        in: path
+        name: metricID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/structs.Metric'
+        "404":
+          description: ErrMetricNotFound
+          schema:
+            type: string
+        "501":
+          description: ErrMetricBadType
+          schema:
+            type: string
+      summary: Get metric
+      tags:
+      - metrics
+swagger: "2.0"
