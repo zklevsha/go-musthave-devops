@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/zklevsha/go-musthave-devops/internal/config"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
@@ -529,5 +531,16 @@ func TestRootHandler(t *testing.T) {
 			}
 		})
 	}
+
+}
+
+func TestGetHandler(t *testing.T) {
+	name := "testing GetHandler"
+	config := config.ServerConfig{}
+	storage := structs.NewMemoryStorage()
+	ctx := context.Background()
+	t.Run(name, func(t *testing.T) {
+		handlers.GetHandler(config, ctx, storage)
+	})
 
 }
