@@ -58,6 +58,19 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
 	w.Write(responseBody)
 }
 
+// UpdateMetricJSONHandler godoc
+// @Summary  Set/Update metric
+// @Description Set or Update metric value
+// @Tags metrics
+// @Produce  json
+// @Produce text/plain
+// @Param  metricType path string true "metric type" enums(counter,gauge)
+// @Param  metricID path string true "metric id"
+// @Param  metricValue path string true "metric value"
+// @Success 200 {object} structs.Response
+// @Failure 400 {object} structs.Response
+// @Failure 501 {object} structs.Response
+// @Router /update/{metricType}/{metricID}/{metricValue} [post]
 func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 	сompress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
@@ -101,6 +114,17 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 		&structs.Response{Message: "metric was saved"}, сompress, asText)
 }
 
+// UpdateMetricJSONHandler godoc
+// @Summary  Set/Update metric
+// @Description Set or Update metrics value
+// @Tags metrics
+// @Produce  json
+// @Produce text/plain
+// @Param metrics body structs.Metric true "Metric to set/update"
+// @Success 200 {object} structs.Response
+// @Failure 400 {object} structs.Response
+// @Failure 501 {object} structs.Response
+// @Router /update/ [post]
 func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
@@ -168,6 +192,17 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 
 }
 
+// UpdateMeticsBatchHandler godoc
+// @Summary  Set/Update metrics
+// @Description Set or Update multiple metrics at once
+// @Tags metrics
+// @Produce  json
+// @Produce text/plain
+// @Param metrics body structs.Metrics true "List of metrics to set/update"
+// @Success 200 {object} structs.Response{}
+// @Failure 400 {object} structs.Response{}
+// @Failure 501 {object} structs.Response{}
+// @Router /updates/ [post]
 func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Request) {
 	requestCompressed :=
 		strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
@@ -216,7 +251,7 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 		compressResponse, responseAsText)
 }
 
-//Geting metric godoc
+//GetMetricHandler godoc
 // @Summary  Get metric
 // @Description Retreiving metric value
 // @Tags metrics
@@ -224,8 +259,8 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 // @Param  metricType path string true "metric type" enums(counter,gauge)
 // @Param  metricID path string true "metric id"
 // @Success 200 {object} structs.Metric
-// @Failure 404 {string} string "ErrMetricNotFound"
-// @Failure 501 {string} string "ErrMetricBadType"
+// @Failure 404 {object} structs.Response
+// @Failure 501 {object} structs.Response
 // @Router /value/{metricType}/{metricID} [get]
 func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	сompress :=
@@ -255,10 +290,10 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce  json
 // @Produce text/plain
-// @Param order body structs.MetricGet true "Get value for metric"
+// @Param metric body structs.MetricGet true "Get value for metric"
 // @Success 200 {object} structs.Metric
-// @Failure 404 {object} structs.ServerResponse{error=string} "ErrMetricNotFound"
-// @Failure 501 {object} structs.ServerResponse{error=string} "ErrMetricBadType"
+// @Failure 404 {object} structs.Response
+// @Failure 501 {object} structs.Response
 // @Router /value/ [post]
 func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")

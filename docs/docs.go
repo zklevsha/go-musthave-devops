@@ -37,6 +37,157 @@ const docTemplate = `{
                 }
             }
         },
+        "/update/": {
+            "post": {
+                "description": "Set or Update metrics value",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set/Update metric",
+                "parameters": [
+                    {
+                        "description": "Metric to set/update",
+                        "name": "metrics",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/structs.Metric"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/update/{metricType}/{metricID}/{metricValue}": {
+            "post": {
+                "description": "Set or Update metric value",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set/Update metric",
+                "parameters": [
+                    {
+                        "enum": [
+                            "counter",
+                            "gauge"
+                        ],
+                        "type": "string",
+                        "description": "metric type",
+                        "name": "metricType",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "metric id",
+                        "name": "metricID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "metric value",
+                        "name": "metricValue",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/updates/": {
+            "post": {
+                "description": "Set or Update multiple metrics at once",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set/Update metrics",
+                "parameters": [
+                    {
+                        "description": "List of metrics to set/update",
+                        "name": "metrics",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/structs.Metric"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/value/": {
             "post": {
                 "description": "Retreiving metric value",
@@ -54,7 +205,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Get value for metric",
-                        "name": "order",
+                        "name": "metric",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -70,35 +221,15 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "ErrMetricNotFound",
+                        "description": "Not Found",
                         "schema": {
-                            "allOf": [
-                                {},
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/structs.Response"
                         }
                     },
                     "501": {
-                        "description": "ErrMetricBadType",
+                        "description": "Not Implemented",
                         "schema": {
-                            "allOf": [
-                                {},
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "error": {
-                                            "type": "string"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/structs.Response"
                         }
                     }
                 }
@@ -142,15 +273,15 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "ErrMetricNotFound",
+                        "description": "Not Found",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/structs.Response"
                         }
                     },
                     "501": {
-                        "description": "ErrMetricBadType",
+                        "description": "Not Implemented",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/structs.Response"
                         }
                     }
                 }

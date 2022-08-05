@@ -56,6 +56,107 @@ paths:
       summary: Ping Database
       tags:
       - self-health
+  /update/:
+    post:
+      description: Set or Update metrics value
+      parameters:
+      - description: Metric to set/update
+        in: body
+        name: metrics
+        required: true
+        schema:
+          $ref: '#/definitions/structs.Metric'
+      produces:
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/structs.Response'
+      summary: Set/Update metric
+      tags:
+      - metrics
+  /update/{metricType}/{metricID}/{metricValue}:
+    post:
+      description: Set or Update metric value
+      parameters:
+      - description: metric type
+        enum:
+        - counter
+        - gauge
+        in: path
+        name: metricType
+        required: true
+        type: string
+      - description: metric id
+        in: path
+        name: metricID
+        required: true
+        type: string
+      - description: metric value
+        in: path
+        name: metricValue
+        required: true
+        type: string
+      produces:
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/structs.Response'
+      summary: Set/Update metric
+      tags:
+      - metrics
+  /updates/:
+    post:
+      description: Set or Update multiple metrics at once
+      parameters:
+      - description: List of metrics to set/update
+        in: body
+        name: metrics
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/structs.Metric'
+          type: array
+      produces:
+      - application/json
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/structs.Response'
+      summary: Set/Update metrics
+      tags:
+      - metrics
   /value/:
     post:
       consumes:
@@ -64,7 +165,7 @@ paths:
       parameters:
       - description: Get value for metric
         in: body
-        name: order
+        name: metric
         required: true
         schema:
           $ref: '#/definitions/structs.MetricGet'
@@ -77,23 +178,13 @@ paths:
           schema:
             $ref: '#/definitions/structs.Metric'
         "404":
-          description: ErrMetricNotFound
+          description: Not Found
           schema:
-            allOf:
-            - {}
-            - properties:
-                error:
-                  type: string
-              type: object
+            $ref: '#/definitions/structs.Response'
         "501":
-          description: ErrMetricBadType
+          description: Not Implemented
           schema:
-            allOf:
-            - {}
-            - properties:
-                error:
-                  type: string
-              type: object
+            $ref: '#/definitions/structs.Response'
       summary: Get  metric
       tags:
       - metrics
@@ -122,13 +213,13 @@ paths:
           schema:
             $ref: '#/definitions/structs.Metric'
         "404":
-          description: ErrMetricNotFound
+          description: Not Found
           schema:
-            type: string
+            $ref: '#/definitions/structs.Response'
         "501":
-          description: ErrMetricBadType
+          description: Not Implemented
           schema:
-            type: string
+            $ref: '#/definitions/structs.Response'
       summary: Get metric
       tags:
       - metrics
