@@ -58,7 +58,7 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
 	w.Write(responseBody)
 }
 
-// UpdateMetricJSONHandler godoc
+// UpdateMeticHandler godoc
 // @Summary  Set/Update metric
 // @Description Set or Update metric value
 // @Tags metrics
