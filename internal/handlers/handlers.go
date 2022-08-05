@@ -17,7 +17,7 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
-func getErrStatusCode(err error) int {
+func GetErrStatusCode(err error) int {
 	switch {
 	case errors.Is(err, structs.ErrMetricNotFound):
 		return http.StatusNotFound
@@ -60,7 +60,7 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 
 	m, err := serializer.DecodeURL(r)
 	if err != nil {
-		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
+		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 	err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.AsText(), err.Error())
-		h.sendResponse(w, getErrStatusCode(err),
+		h.sendResponse(w, GetErrStatusCode(err),
 			&structs.Response{Error: e},
 			сompress, asText)
 		return
@@ -152,7 +152,7 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 	err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.ID, err.Error())
-		h.sendResponse(w, getErrStatusCode(err),
+		h.sendResponse(w, GetErrStatusCode(err),
 			&structs.Response{Error: e},
 			compressResponse, asText)
 		return
@@ -201,7 +201,7 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric batch: %s", err.Error())
 		log.Printf("ERROR %s", e)
-		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: e},
+		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: e},
 			compressResponse, responseAsText)
 		return
 	}
@@ -219,13 +219,13 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 	m, err := serializer.DecodeURL(r)
 	if err != nil {
 		e := fmt.Sprintf("failed to decode url: %s", err.Error())
-		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: e}, сompress, asText)
+		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: e}, сompress, asText)
 		return
 	}
 	metric, err := h.Storage.GetMetric(m)
 	if err != nil {
 		log.Printf(" WARN failed to get metric: %s", err.Error())
-		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
+		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
 		return
 	}
 
@@ -271,7 +271,7 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
 		log.Printf("WARN %s", e)
-		h.sendResponse(w, getErrStatusCode(err), &structs.Response{Error: e},
+		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: e},
 			compressResponse, responseAsText)
 		return
 	}
@@ -280,7 +280,7 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func (h *Handlers) rootHandrer(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	compress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
@@ -312,7 +312,7 @@ func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
 func GetHandler(c config.ServerConfig, ctx context.Context, store structs.Storage) http.Handler {
 	r := mux.NewRouter()
 	h := Handlers{key: c.Key, Storage: store}
-	r.HandleFunc("/", h.rootHandrer)
+	r.HandleFunc("/", h.RootHandler)
 
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
 		h.UpdateMeticHandler).Methods("POST")
