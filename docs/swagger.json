@@ -1,0 +1,337 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Service for storing and retreiving metrics",
+        "title": "Monitoring API",
+        "contact": {}
+    },
+    "paths": {
+        "/ping": {
+            "get": {
+                "description": "Checking if DB is available",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "self-health"
+                ],
+                "summary": "Ping Database",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/update/": {
+            "post": {
+                "description": "Set or Update metrics value",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set/Update metric",
+                "parameters": [
+                    {
+                        "description": "Metric to set/update",
+                        "name": "metrics",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/structs.Metric"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/update/{metricType}/{metricID}/{metricValue}": {
+            "post": {
+                "description": "Set or Update metric value",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set/Update metric",
+                "parameters": [
+                    {
+                        "enum": [
+                            "counter",
+                            "gauge"
+                        ],
+                        "type": "string",
+                        "description": "metric type",
+                        "name": "metricType",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "metric id",
+                        "name": "metricID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "metric value",
+                        "name": "metricValue",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/updates/": {
+            "post": {
+                "description": "Set or Update multiple metrics at once",
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Set/Update metrics",
+                "parameters": [
+                    {
+                        "description": "List of metrics to set/update",
+                        "name": "metrics",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/structs.Metric"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/value/": {
+            "post": {
+                "description": "Retreiving metric value",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json",
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get  metric",
+                "parameters": [
+                    {
+                        "description": "Get value for metric",
+                        "name": "metric",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/structs.MetricGet"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Metric"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/value/{metricType}/{metricID}": {
+            "get": {
+                "description": "Retreiving metric value",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get metric",
+                "parameters": [
+                    {
+                        "enum": [
+                            "counter",
+                            "gauge"
+                        ],
+                        "type": "string",
+                        "description": "metric type",
+                        "name": "metricType",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "metric id",
+                        "name": "metricID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Metric"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "501": {
+                        "description": "Not Implemented",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "structs.Metric": {
+            "type": "object",
+            "properties": {
+                "delta": {
+                    "description": "значение метрики в случае передачи counter",
+                    "type": "integer"
+                },
+                "hash": {
+                    "description": "hmac метрики",
+                    "type": "string"
+                },
+                "id": {
+                    "description": "имя метрики",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "параметр, принимающий значение gauge или counter",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "значение метрики в случае передачи gauge",
+                    "type": "number"
+                }
+            }
+        },
+        "structs.MetricGet": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "имя метрики",
+                    "type": "string",
+                    "example": "CPU"
+                },
+                "type": {
+                    "description": "параметр, принимающий значение gauge или counter",
+                    "type": "string",
+                    "example": "gauge"
+                }
+            }
+        },
+        "structs.Response": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

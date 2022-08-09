@@ -40,3 +40,5 @@ func (m *Metric) AsText() string {
 	}
 	return str
 }
+
+type Metrics []Metric
