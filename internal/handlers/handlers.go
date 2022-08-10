@@ -48,7 +48,7 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int
 	compress :=
 		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
 	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-	asHTML := strings.Contains(strings.Join(r.Header["Accept"], ","), "html/text")
+	asHTML := strings.Contains(strings.Join(r.Header["Accept"], ","), "html")
 	responseBody, err := serializer.EncodeServerResponse(resp, compress, asText, h.key)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -61,7 +61,7 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int
 	}
 
 	if asHTML {
-		w.Header().Set("Content-Type", "html/text")
+		w.Header().Set("Content-Type", "text/html")
 	} else if asText {
 		w.Header().Set("Content-Type", "text/plain")
 	} else {
