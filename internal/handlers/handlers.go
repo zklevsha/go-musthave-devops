@@ -42,8 +42,13 @@ type Handlers struct {
 	Storage structs.Storage
 }
 
-func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
-	resp structs.ServerResponse, compress bool, asText bool) {
+func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int,
+	resp structs.ServerResponse) {
+
+	compress :=
+		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
+	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
+
 	responseBody, err := serializer.EncodeServerResponse(resp, compress, asText, h.key)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -53,6 +58,11 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
 
 	if compress {
 		w.Header().Set("Content-Encoding", "gzip")
+	}
+	if asText {
+		w.Header().Set("Content-Type", "text/plain")
+	} else {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	}
 	w.WriteHeader(code)
 	w.Write(responseBody)
@@ -72,46 +82,38 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, code int,
 // @Failure 501 {object} structs.Response
 // @Router /update/{metricType}/{metricID}/{metricValue} [post]
 func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
-	сompress :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
 	m, err := serializer.DecodeURL(r)
 	if err != nil {
-		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
+		h.sendResponse(w, r, GetErrStatusCode(err), &structs.Response{Error: err.Error()})
 		return
 	}
 
 	if m.MType == "counter" && m.Delta == nil {
 		e := "delta attribute is not set"
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			сompress, asText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 		return
 	}
 	if m.MType == "gauge" && m.Value == nil {
 		e := "gauge attribute is not set"
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			сompress, asText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 		return
 	}
 	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
-		h.sendResponse(w, http.StatusBadRequest,
-			&structs.Response{Error: "invalid hash value"},
-			сompress, asText)
+		h.sendResponse(w, r, http.StatusBadRequest,
+			&structs.Response{Error: "invalid hash value"})
 		return
 	}
 
 	err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.AsText(), err.Error())
-		h.sendResponse(w, GetErrStatusCode(err),
-			&structs.Response{Error: e},
-			сompress, asText)
+		h.sendResponse(w, r, GetErrStatusCode(err),
+			&structs.Response{Error: e})
 		return
 	}
 
-	h.sendResponse(w, http.StatusOK,
-		&structs.Response{Message: "metric was saved"}, сompress, asText)
+	h.sendResponse(w, r, http.StatusOK,
+		&structs.Response{Message: "metric was saved"})
 }
 
 // UpdateMetricJSONHandler godoc
@@ -126,69 +128,41 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 501 {object} structs.Response
 // @Router /update/ [post]
 func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	requestCompressed :=
-		strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
-	compressResponse :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	asText :=
-		!strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		e := fmt.Sprintf("failed to read body: %s", err.Error())
-		h.sendResponse(w, http.StatusBadRequest,
-			&structs.Response{Error: e}, compressResponse, asText)
-	}
-
-	if requestCompressed {
-		b, err = archive.Decompress(b)
-		if err != nil {
-			e := fmt.Sprintf("Failed to decompress request body: %s", err.Error())
-			h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-				compressResponse, asText)
-			return
-		}
-	}
+	// RequestCtxBody{} should be set in read body middleware
+	b := r.Context().Value(structs.RequestCtxBody{}).([]byte)
 
 	m, err := serializer.DecodeBody(bytes.NewReader(b))
 	if err != nil {
 		e := fmt.Sprintf("failed to decode request body: %s", err.Error())
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, asText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 		return
 	}
 
 	if m.MType == "counter" && m.Delta == nil {
 		e := "delta attribute is not set"
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, asText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 	}
 	if m.MType == "gauge" && m.Value == nil {
 		e := "gauge attribute is not set"
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, asText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 	}
 
 	if h.key != "" && m.CalculateHash(h.key) != m.Hash {
-		h.sendResponse(w, http.StatusBadRequest,
-			&structs.Response{Error: "invalid hash value"},
-			compressResponse, asText)
+		h.sendResponse(w, r, http.StatusBadRequest,
+			&structs.Response{Error: "invalid hash value"})
 		return
 	}
 
 	err = h.Storage.UpdateMetric(m)
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric %s: %s", m.ID, err.Error())
-		h.sendResponse(w, GetErrStatusCode(err),
-			&structs.Response{Error: e},
-			compressResponse, asText)
+		h.sendResponse(w, r, GetErrStatusCode(err),
+			&structs.Response{Error: e})
 		return
 	}
 
-	h.sendResponse(w, http.StatusOK, &structs.Response{Message: "metric was saved"},
-		compressResponse, asText)
+	h.sendResponse(w, r, http.StatusOK,
+		&structs.Response{Message: "metric was saved"})
 
 }
 
@@ -204,36 +178,13 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 // @Failure 501 {object} structs.Response{}
 // @Router /updates/ [post]
 func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Request) {
-	requestCompressed :=
-		strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
-	compressResponse :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	responseAsText :=
-		!strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		e := fmt.Sprintf("failed to read body: %s", err.Error())
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, responseAsText)
-	}
-
-	if requestCompressed {
-		b, err = archive.Decompress(b)
-		if err != nil {
-			e := fmt.Sprintf("Failed to decompress request body: %s", err.Error())
-			h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-				compressResponse, responseAsText)
-			return
-		}
-	}
-
+	// RequestCtxBody{} should be set in read body middleware
+	b := r.Context().Value(structs.RequestCtxBody{}).([]byte)
 	metrics, err := serializer.DecodeBodyBatch(bytes.NewReader(b))
 	if err != nil {
 		e := fmt.Sprintf("failed to decode request body: %s", err.Error())
 		log.Printf("ERROR %s", e)
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, responseAsText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 		return
 	}
 	log.Println("INFO updating metrics batch")
@@ -241,14 +192,12 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		e := fmt.Sprintf("failed to update metric batch: %s", err.Error())
 		log.Printf("ERROR %s", e)
-		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: e},
-			compressResponse, responseAsText)
+		h.sendResponse(w, r, GetErrStatusCode(err), &structs.Response{Error: e})
 		return
 	}
 	m := "metrics batch was updated"
 	log.Printf("INFO %s", m)
-	h.sendResponse(w, http.StatusOK, &structs.Response{Message: m},
-		compressResponse, responseAsText)
+	h.sendResponse(w, r, http.StatusOK, &structs.Response{Message: m})
 }
 
 //GetMetricHandler godoc
@@ -263,24 +212,20 @@ func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Reque
 // @Failure 501 {object} structs.Response
 // @Router /value/{metricType}/{metricID} [get]
 func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
-	сompress :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
 	m, err := serializer.DecodeURL(r)
 	if err != nil {
 		e := fmt.Sprintf("failed to decode url: %s", err.Error())
-		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: e}, сompress, asText)
+		h.sendResponse(w, r, GetErrStatusCode(err), &structs.Response{Error: e})
 		return
 	}
 	metric, err := h.Storage.GetMetric(m)
 	if err != nil {
 		log.Printf(" WARN failed to get metric: %s", err.Error())
-		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: err.Error()}, сompress, asText)
+		h.sendResponse(w, r, GetErrStatusCode(err), &structs.Response{Error: err.Error()})
 		return
 	}
 
-	h.sendResponse(w, http.StatusOK, &metric, сompress, asText)
+	h.sendResponse(w, r, http.StatusOK, &metric)
 }
 
 //GetMetricJSONHandler godoc
@@ -296,37 +241,12 @@ func (h *Handlers) GetMetricHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure 501 {object} structs.Response
 // @Router /value/ [post]
 func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	requestCompressed :=
-		strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
-	compressResponse :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	responseAsText :=
-		!strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		e := fmt.Sprintf("failed to read body: %s", err.Error())
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, responseAsText)
-	}
-
-	if requestCompressed {
-		b, err = archive.Decompress(b)
-		if err != nil {
-			e := fmt.Sprintf("Failed to decompress request body: %s", err.Error())
-			h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-				compressResponse, responseAsText)
-			return
-		}
-	}
-
+	// RequestCtxBody{} should be set in read body middleware
+	b := r.Context().Value(structs.RequestCtxBody{}).([]byte)
 	m, err := serializer.DecodeBody(bytes.NewReader(b))
 	if err != nil {
 		e := fmt.Sprintf("failed to decode request body: %s", err.Error())
-		h.sendResponse(w, http.StatusBadRequest, &structs.Response{Error: e},
-			compressResponse, responseAsText)
+		h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 		return
 	}
 	metric, err := h.Storage.GetMetric(m)
@@ -334,23 +254,18 @@ func (h *Handlers) GetMetricJSONHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		e := fmt.Sprintf("failed to get metric: %s", err.Error())
 		log.Printf("WARN %s", e)
-		h.sendResponse(w, GetErrStatusCode(err), &structs.Response{Error: e},
-			compressResponse, responseAsText)
+		h.sendResponse(w, r, GetErrStatusCode(err), &structs.Response{Error: e})
 		return
 	}
 
-	h.sendResponse(w, http.StatusOK, &metric, compressResponse, responseAsText)
+	h.sendResponse(w, r, http.StatusOK, &metric)
 
 }
 
 func (h *Handlers) RootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	compress :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
 	resp := &structs.Response{Message: "<html><body><h1>Server is wokring</h1></body></html>"}
-	h.sendResponse(w, http.StatusOK, resp, compress, asText)
+	h.sendResponse(w, r, http.StatusOK, resp)
 }
 
 // Ping godoc
@@ -362,44 +277,71 @@ func (h *Handlers) RootHandler(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} structs.Response
 // @Router /ping [get]
 func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
-	compress :=
-		strings.Contains(strings.Join(r.Header["Accept-Encoding"], ","), "gzip")
-	asText := !strings.Contains(strings.Join(r.Header["Accept"], ","), "application/json")
-
 	err := h.Storage.Avaliable()
 	if err != nil {
-		h.sendResponse(w, http.StatusInternalServerError,
-			&structs.Response{Error: fmt.Sprintf("DB is down: %s", err.Error())},
-			compress, asText)
+		h.sendResponse(w, r, http.StatusInternalServerError,
+			&structs.Response{Error: fmt.Sprintf("DB is down: %s", err.Error())})
 		return
 	} else {
-		h.sendResponse(w, http.StatusOK,
-			&structs.Response{Message: "DB is working correctly"},
-			compress, asText)
+		h.sendResponse(w, r, http.StatusOK,
+			&structs.Response{Message: "DB is working correctly"})
 		return
 	}
 }
 
-func GetHandler(c config.ServerConfig, ctx context.Context, store structs.Storage) http.Handler {
+func (h *Handlers) ReadBodyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqCompressed :=
+			strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			e := fmt.Sprintf("failed to read body: %s", err.Error())
+			h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
+			return
+		}
+		if reqCompressed {
+			b, err = archive.Decompress(b)
+			if err != nil {
+				e := fmt.Sprintf("Failed to decompress request body: %s", err.Error())
+				h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
+				return
+			}
+		}
+		ctx := context.WithValue(r.Context(), structs.RequestCtxBody{}, b)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func GetHandler(c config.ServerConfig, store structs.Storage) http.Handler {
 	r := mux.NewRouter()
 	h := Handlers{key: c.Key, Storage: store}
+
+	// root
 	r.HandleFunc("/", h.RootHandler)
 
+	// update metric (path parameters)
 	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
 		h.UpdateMeticHandler).Methods("POST")
 
-	r.HandleFunc("/update/", h.UpdateMetricJSONHandler).
+	// update metric (body parameter)
+	chain := h.ReadBodyMiddleware(http.HandlerFunc(h.UpdateMetricJSONHandler))
+	r.Handle("/update/", chain).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
+	// get metric (path parameter)
 	r.HandleFunc("/value/{metricType}/{metricID}",
 		h.GetMetricHandler).Methods("GET")
 
-	r.HandleFunc("/value/", h.GetMetricJSONHandler).
+	// get metric (body parameter)
+	chain = h.ReadBodyMiddleware(http.HandlerFunc(h.GetMetricJSONHandler))
+	r.Handle("/value/", chain).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
-	r.HandleFunc("/updates/", h.UpdateMeticsBatchHandler).
+	// update multiple metrics
+	chain = h.ReadBodyMiddleware(http.HandlerFunc(h.UpdateMeticsBatchHandler))
+	r.Handle("/updates/", chain).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 

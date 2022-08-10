@@ -54,7 +54,7 @@ func main() {
 	}
 
 	// Starting web server
-	handler := handlers.GetHandler(config, ctx, s)
+	handler := handlers.GetHandler(config, s)
 	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{
