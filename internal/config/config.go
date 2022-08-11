@@ -17,20 +17,20 @@ const storeFileDefault = "/tmp/devops-metrics-db.json"
 const restoreDefault = true
 
 type AgentConfig struct {
-	PollInterval   time.Duration
-	ReportInterval time.Duration
 	ServerAddress  string
 	Key            string
+	PollInterval   time.Duration
+	ReportInterval time.Duration
 }
 
 type ServerConfig struct {
 	ServerAddress string
-	StoreInterval time.Duration
 	StoreFile     string
-	Restore       bool
 	Key           string
 	DSN           string
+	StoreInterval time.Duration
 	UseDB         bool
+	Restore       bool
 }
 
 func parseInterval(env string, flag string) (time.Duration, error) {

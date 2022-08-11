@@ -18,8 +18,8 @@ import (
 // TestUpdateMeticHandler
 func TestUpdateMeticHandler(t *testing.T) {
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 
 	type metric struct {
@@ -92,8 +92,8 @@ func TestUpdateMeticHandler(t *testing.T) {
 
 func TestGetErrStatusCode(t *testing.T) {
 	tt := []struct {
-		name string
 		err  error
+		name string
 		want int
 	}{
 		{
@@ -121,8 +121,8 @@ func TestUpdateMeticJSONHandler(t *testing.T) {
 	gauge := float64(1.5)
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 
 	tt := []struct {
@@ -196,14 +196,14 @@ func TestUpdateMeticsBatchHandler(t *testing.T) {
 	gauge := float64(1.5)
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 
 	tt := []struct {
+		want    want
 		name    string
 		metrics []structs.Metric
-		want    want
 	}{
 		{
 			name: "trying to update counter and gauge",
@@ -265,8 +265,8 @@ func TestGetMetricHandler(t *testing.T) {
 	gauge := float64(1.5)
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 
 	tt := []struct {
@@ -346,8 +346,8 @@ func TestGetMetricJSONHandler(t *testing.T) {
 	gauge := float64(1.5)
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 	tt := []struct {
 		name   string
@@ -425,8 +425,8 @@ func TestGetMetricJSONHandler(t *testing.T) {
 func TestPing(t *testing.T) {
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 
 	tt := []struct {
@@ -471,8 +471,8 @@ func TestPing(t *testing.T) {
 func TestRootHandler(t *testing.T) {
 
 	type want struct {
-		code     int
 		response string
+		code     int
 	}
 
 	tt := []struct {
