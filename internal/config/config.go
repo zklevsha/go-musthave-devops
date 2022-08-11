@@ -1,3 +1,4 @@
+// Package config implements parsing logic for Agent and Server configuration parameters
 package config
 
 import (

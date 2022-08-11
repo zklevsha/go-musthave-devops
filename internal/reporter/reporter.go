@@ -1,3 +1,4 @@
+// Package reporter implements metric sending logic
 package reporter
 
 import (

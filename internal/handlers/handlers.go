@@ -1,6 +1,6 @@
+// Package handlers stores http routes (request handle functions)
 // @title Monitoring API
 // @description Service for storing and retreiving metrics
-
 package handlers
 
 import (

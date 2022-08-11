@@ -1,3 +1,4 @@
+// Package archive implements compress/decompress logic for byte slices
 package archive
 
 import (

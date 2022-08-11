@@ -1,3 +1,4 @@
+//Package dumper allows to dump metric to json file at the server stop and restore at the server start
 package dumper
 
 import (

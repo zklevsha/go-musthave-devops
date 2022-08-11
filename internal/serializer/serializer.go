@@ -1,3 +1,4 @@
+// Package serializer allows to decode/encode Body and URL in HTTP requests and responses
 package serializer
 
 import (

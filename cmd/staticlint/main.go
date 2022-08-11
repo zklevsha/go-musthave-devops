@@ -1,6 +1,7 @@
 package main
 
 import (
+	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
 	"golang.org/x/tools/go/analysis/passes/assign"
@@ -42,10 +43,14 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedresult"
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
+	"honnef.co/go/tools/simple"
+	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 )
 
 func main() {
-	multichecker.Main(
+	var analyzers []*analysis.Analyzer
+	analyzers = append(analyzers,
 		asmdecl.Analyzer,
 		assign.Analyzer,
 		atomicalign.Analyzer,
@@ -87,4 +92,15 @@ func main() {
 		unusedwrite.Analyzer,
 		usesgenerics.Analyzer,
 	)
+	for _, v := range simple.Analyzers {
+		analyzers = append(analyzers, v.Analyzer)
+	}
+	for _, v := range staticcheck.Analyzers {
+		analyzers = append(analyzers, v.Analyzer)
+	}
+	for _, v := range stylecheck.Analyzers {
+		analyzers = append(analyzers, v.Analyzer)
+	}
+
+	multichecker.Main(analyzers...)
 }

@@ -1,3 +1,4 @@
+// Package db responsible for working with Postgresql database
 package db
 
 import (
