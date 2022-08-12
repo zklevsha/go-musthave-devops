@@ -2,7 +2,6 @@
 package checker
 
 import (
-	"fmt"
 	"go/ast"
 	"strings"
 
@@ -16,8 +15,7 @@ func checkExitCalls(f *ast.FuncDecl, pass *analysis.Pass) {
 			if fun, ok := fc.Fun.(*ast.SelectorExpr); ok {
 				funcName := fun.Sel.Name
 				if strings.Contains("os.Exit", funcName) {
-					pos := pass.Fset.Position(fc.Pos())
-					fmt.Printf("found os.Exit call in main(): \n\t %s %d\n", pos.Filename, pos.Line)
+					pass.Reportf(fc.Pos(), "found os.Exit call in main()")
 				}
 
 			}
