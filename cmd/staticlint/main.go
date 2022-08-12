@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/zklevsha/go-musthave-devops/internal/checker"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/asmdecl"
@@ -91,6 +92,7 @@ func main() {
 		unusedresult.Analyzer,
 		unusedwrite.Analyzer,
 		usesgenerics.Analyzer,
+		checker.ExitCheckAnalyzer,
 	)
 	for _, v := range simple.Analyzers {
 		analyzers = append(analyzers, v.Analyzer)
