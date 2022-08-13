@@ -1,6 +1,6 @@
+// Package handlers stores http routes (request handle functions)
 // @title Monitoring API
 // @description Service for storing and retreiving metrics
-
 package handlers
 
 import (
@@ -38,8 +38,8 @@ func GetErrStatusCode(err error) int {
 }
 
 type Handlers struct {
-	key     string
 	Storage structs.Storage
+	key     string
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int,

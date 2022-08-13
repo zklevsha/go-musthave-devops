@@ -1,3 +1,4 @@
+//Package hash implements hash generation and validation logic
 package hash
 
 import (

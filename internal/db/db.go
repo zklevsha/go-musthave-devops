@@ -1,3 +1,4 @@
+// Package db responsible for working with Postgresql database
 package db
 
 import (
@@ -11,9 +12,9 @@ import (
 )
 
 type DBConnector struct {
-	DSN        string
 	Ctx        context.Context
 	Pool       *pgxpool.Pool
+	DSN        string
 	initalized bool
 }
 
@@ -262,7 +263,8 @@ func (d *DBConnector) CreateTables() error {
 }
 
 func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
-	err := d.checkInit()
+	var err error
+	err = d.checkInit()
 	if err != nil {
 		return err
 	}
@@ -294,12 +296,12 @@ func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
 	for _, m := range metrics {
 		switch m.MType {
 		case "counter":
-			_, err := tx.Exec(d.Ctx, sqlCounters, m.ID, m.Delta)
+			_, err = tx.Exec(d.Ctx, sqlCounters, m.ID, m.Delta)
 			if err != nil {
 				return fmt.Errorf("failed to update counter %s(%d): %s", m.ID, *m.Delta, err.Error())
 			}
 		case "gauge":
-			_, err := tx.Exec(d.Ctx, sqlGauges, m.ID, m.Value)
+			_, err = tx.Exec(d.Ctx, sqlGauges, m.ID, m.Value)
 			if err != nil {
 				return fmt.Errorf("failed to update gauge %s(%f): %s", m.ID, *m.Value, err.Error())
 			}

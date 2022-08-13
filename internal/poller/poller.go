@@ -1,3 +1,4 @@
+// Package poller implements metric polling logic (used by agent)
 package poller
 
 import (
