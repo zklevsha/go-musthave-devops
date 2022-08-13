@@ -15,10 +15,21 @@ import (
 
 var wg sync.WaitGroup
 
-func main() {
-	log.Printf("INFO main starting agent")
+var buildVersion string = "N/A"
+var buildDate string = "N/A"
+var buildCommit string = "N/A"
+
+func printStartupInfo() {
+	log.Println("INFO main starting agent")
+	log.Printf("INFO main Build version: %s", buildVersion)
+	log.Printf("INFO main Build date: %s", buildDate)
+	log.Printf("INFO main Build commit %s", buildCommit)
 	log.Printf("DEBUG startup flags: %v", os.Args)
 	log.Printf("DEBUG ENVs: %v", os.Environ())
+}
+
+func main() {
+	printStartupInfo()
 	agentConfig := config.GetAgentConfig()
 	log.Printf("INFO main agent config: PollInterval: %v, ReportInterval: %v, ServerAddress: %s",
 		agentConfig.PollInterval, agentConfig.ReportInterval, agentConfig.ServerAddress)
