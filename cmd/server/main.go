@@ -19,10 +19,21 @@ import (
 
 var wg sync.WaitGroup
 
-func main() {
+var buildVersion string = "N/A"
+var buildDate string = "N/A"
+var buildCommit string = "N/A"
+
+func printStartupInfo() {
 	log.Println("INFO main starting server")
+	log.Printf("INFO main Build version: %s", buildVersion)
+	log.Printf("INFO main Build date: %s", buildDate)
+	log.Printf("INFO main Build commit %s", buildCommit)
 	log.Printf("DEBUG startup flags: %v", os.Args)
 	log.Printf("DEBUG ENVs: %v", os.Environ())
+}
+
+func main() {
+	printStartupInfo()
 
 	config := config.GetServerConfig()
 
