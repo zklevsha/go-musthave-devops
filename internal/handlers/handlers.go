@@ -6,6 +6,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/rsa"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 	_ "github.com/zklevsha/go-musthave-devops/docs"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
 	"github.com/zklevsha/go-musthave-devops/internal/config"
+	"github.com/zklevsha/go-musthave-devops/internal/rsaencrypt"
 	"github.com/zklevsha/go-musthave-devops/internal/serializer"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
@@ -40,6 +42,7 @@ func GetErrStatusCode(err error) int {
 type Handlers struct {
 	Storage structs.Storage
 	key     string
+	privKey *rsa.PrivateKey
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int,
@@ -294,14 +297,27 @@ func (h *Handlers) Ping(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) ReadBodyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reqCompressed :=
-			strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
+		// Reading bytes
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			e := fmt.Sprintf("failed to read body: %s", err.Error())
 			h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
 			return
 		}
+
+		// Decrypt
+		if h.privKey != nil {
+			b, err = rsaencrypt.Decrypt(h.privKey, b, []byte(config.RsaLabel))
+			if err != nil {
+				e := fmt.Sprintf("failed to decrypt body: %s", err.Error())
+				h.sendResponse(w, r, http.StatusBadRequest, &structs.Response{Error: e})
+				return
+			}
+		}
+
+		// Decompress
+		reqCompressed :=
+			strings.Contains(strings.Join(r.Header["Content-Encoding"], ","), "gzip")
 		if reqCompressed {
 			b, err = archive.Decompress(b)
 			if err != nil {
@@ -310,14 +326,16 @@ func (h *Handlers) ReadBodyMiddleware(next http.Handler) http.Handler {
 				return
 			}
 		}
+
+		// Adding body to context
 		ctx := context.WithValue(r.Context(), structs.RequestCtxBody{}, b)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func GetHandler(c config.ServerConfig, store structs.Storage) http.Handler {
+func GetHandler(c config.ServerConfig, store structs.Storage, privKey *rsa.PrivateKey) http.Handler {
 	r := mux.NewRouter()
-	h := Handlers{key: c.Key, Storage: store}
+	h := Handlers{key: c.Key, Storage: store, privKey: privKey}
 
 	// root
 	r.HandleFunc("/", h.RootHandler)

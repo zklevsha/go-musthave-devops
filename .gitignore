@@ -15,10 +15,13 @@
 cmd/agent/agent
 cmd/server/server
 cmd/staticlint/staticlint
-
+cmd/keyGenerator/keyGenerator
 # Dependency directories (remove the comment below to include it)
 vendor/
 
 # IDEs directories
 .idea
 .vscode
+
+# private 
+*.pem

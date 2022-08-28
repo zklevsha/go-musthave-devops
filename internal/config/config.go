@@ -17,21 +17,26 @@ const storeIntervalDefault = time.Duration(300 * time.Second)
 const storeFileDefault = "/tmp/devops-metrics-db.json"
 const restoreDefault = true
 
+// label for Encrypt/Decrypt functions
+const RsaLabel = "metrics"
+
 type AgentConfig struct {
 	ServerAddress  string
 	Key            string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	PublicKeyPath  string
 }
 
 type ServerConfig struct {
-	ServerAddress string
-	StoreFile     string
-	Key           string
-	DSN           string
-	StoreInterval time.Duration
-	UseDB         bool
-	Restore       bool
+	ServerAddress  string
+	StoreFile      string
+	Key            string
+	DSN            string
+	StoreInterval  time.Duration
+	UseDB          bool
+	Restore        bool
+	PrivateKeyPath string
 }
 
 func parseInterval(env string, flag string) (time.Duration, error) {
@@ -74,7 +79,7 @@ func parseInterval(env string, flag string) (time.Duration, error) {
 func GetAgentConfig() AgentConfig {
 	var config AgentConfig
 
-	var addressF, reportF, pollF, keyF string
+	var addressF, reportF, pollF, keyF, publicKeyPathF string
 	flag.StringVar(&addressF, "a", serverAddressDefault,
 		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
 	flag.StringVar(&reportF, "r", reportIntervalDefault.String(),
@@ -82,12 +87,14 @@ func GetAgentConfig() AgentConfig {
 	flag.StringVar(&pollF, "p", pollIntervalDefault.String(),
 		fmt.Sprintf("poll interval (default: %s)", pollIntervalDefault))
 	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set messages will not be signed)")
+	flag.StringVar(&publicKeyPathF, "crypto-key", "", "server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
 	flag.Parse()
 
 	pollEnv := os.Getenv("POLL_INTERVAL")
 	reportEnv := os.Getenv("REPORT_INTERVAL")
 	addressEnv := os.Getenv("ADDRESS")
 	keyEnv := os.Getenv("KEY")
+	publicKeyPathEnv := os.Getenv("CRYPTO_KEY")
 
 	// pollInterval
 	pollInterval, err := parseInterval(pollEnv, pollF)
@@ -123,12 +130,19 @@ func GetAgentConfig() AgentConfig {
 		config.Key = keyF
 	}
 
+	// PublicKeyPath
+	if publicKeyPathEnv != "" {
+		config.PublicKeyPath = publicKeyPathEnv
+	} else {
+		config.PublicKeyPath = publicKeyPathF
+	}
+
 	return config
 }
 
 func GetServerConfig() ServerConfig {
 	var config ServerConfig
-	var addressF, sIntervalF, sFIleF, keyF, DSNf string
+	var addressF, sIntervalF, sFIleF, keyF, DSNf, privateKeyPathF string
 	var restoreF bool
 
 	flag.StringVar(&addressF, "a", serverAddressDefault,
@@ -140,6 +154,7 @@ func GetServerConfig() ServerConfig {
 	flag.BoolVar(&restoreF, "r", restoreDefault, "restore from file at start")
 	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set responses will not be signed and hash from agent will not be checked)")
 	flag.StringVar(&DSNf, "d", "", "database connection string (postgres://username:password@localhost:5432/database_name)")
+	flag.StringVar(&privateKeyPathF, "crypto-key", "", "path to private key to decryt messages with")
 	flag.Parse()
 
 	addressEnv := os.Getenv("ADDRESS")
@@ -148,6 +163,7 @@ func GetServerConfig() ServerConfig {
 	restoreEnv := os.Getenv("RESTORE")
 	keyEnv := os.Getenv("KEY")
 	DSNenv := os.Getenv("DATABASE_DSN")
+	privateKeyPathEnv := os.Getenv("CRYPTO_KEY")
 
 	// address
 	if addressEnv != "" {
@@ -200,12 +216,19 @@ func GetServerConfig() ServerConfig {
 		config.DSN = DSNf
 	}
 
-	// uUseDB
+	// UseDB
 	if config.DSN != "" {
 		config.UseDB = true
 	} else {
 		config.UseDB = false
 	}
-	return config
 
+	// PrivateKeyPath
+	if privateKeyPathEnv != "" {
+		config.PrivateKeyPath = privateKeyPathEnv
+	} else {
+		config.PrivateKeyPath = privateKeyPathF
+	}
+
+	return config
 }

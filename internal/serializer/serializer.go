@@ -87,6 +87,13 @@ func EncodeBodyMetrics(metrics []structs.Metric, key string) ([]byte, error) {
 	return json.Marshal(metrics)
 }
 
+func EncodyBodyMetric(metric structs.Metric, key string) ([]byte, error) {
+	if key != "" {
+		metric.SetHash(key)
+	}
+	return json.Marshal(metric)
+}
+
 func EncodeBodyGauge(id string, value float64, key string) ([]byte, error) {
 	m := structs.Metric{ID: id, MType: "gauge", Value: &value}
 	if key != "" {
