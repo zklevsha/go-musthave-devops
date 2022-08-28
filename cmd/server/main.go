@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/db"
 	"github.com/zklevsha/go-musthave-devops/internal/dumper"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
+	"github.com/zklevsha/go-musthave-devops/internal/rsaencrypt"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
@@ -37,13 +39,22 @@ func main() {
 
 	config := config.GetServerConfig()
 
-	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t",
-		config.ServerAddress, config.UseDB)
+	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t, privateKeyPath %s",
+		config.ServerAddress, config.UseDB, config.PrivateKeyPath)
 	if !config.UseDB {
 		logMsg += fmt.Sprintf(", StoreInterval: %s, StoreFile: %s, Restore: %t",
 			config.StoreInterval, config.StoreFile, config.Restore)
 	}
 	log.Println(logMsg)
+
+	var privKey *rsa.PrivateKey
+	var err error
+	if config.PrivateKeyPath != "" {
+		privKey, err = rsaencrypt.LoadPrivateKey(config.PrivateKeyPath)
+		if err != nil {
+			log.Fatalf("CRITICAL failed to load private key %s: %s", config.PrivateKeyPath, err.Error())
+		}
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var s structs.Storage
@@ -65,7 +76,7 @@ func main() {
 	}
 
 	// Starting web server
-	handler := handlers.GetHandler(config, s)
+	handler := handlers.GetHandler(config, s, privKey)
 	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{
@@ -78,6 +89,8 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			cancel()
+			wg.Wait()
 			log.Fatalf("Failed to start web server: %s\n", err)
 		}
 	}()
