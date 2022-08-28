@@ -54,7 +54,7 @@ func Decrypt(private *rsa.PrivateKey, message []byte, label []byte) ([]byte, err
 
 func Generate(outDir string) error {
 	// generate key
-	privatekey, err := rsa.GenerateKey(rand.Reader, 2048)
+	privatekey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		fmt.Printf("Cannot generate RSA keyn")
 		os.Exit(1)

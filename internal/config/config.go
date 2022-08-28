@@ -17,6 +17,9 @@ const storeIntervalDefault = time.Duration(300 * time.Second)
 const storeFileDefault = "/tmp/devops-metrics-db.json"
 const restoreDefault = true
 
+// label for Encrypt/Decrypt functions
+const RsaLabel = "metrics"
+
 type AgentConfig struct {
 	ServerAddress  string
 	Key            string

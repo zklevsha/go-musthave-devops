@@ -24,4 +24,4 @@ vendor/
 .vscode
 
 # private 
-.pem
+*.pem
