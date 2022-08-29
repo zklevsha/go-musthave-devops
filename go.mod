@@ -9,6 +9,7 @@ require (
 	github.com/swaggo/http-swagger v1.3.1
 	github.com/swaggo/swag v1.8.4
 	golang.org/x/tools v0.1.12
+	honnef.co/go/tools v0.3.3
 )
 
 require (
@@ -43,5 +44,4 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	honnef.co/go/tools v0.3.3 // indirect
 )
