@@ -37,7 +37,7 @@ func printStartupInfo() {
 func main() {
 	printStartupInfo()
 
-	config := config.GetServerConfig()
+	config := config.GetServerConfig(os.Args[1:])
 
 	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t, privateKeyPath %s",
 		config.ServerAddress, config.UseDB, config.PrivateKeyPath)
