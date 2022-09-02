@@ -19,7 +19,7 @@ func GetServerConfig(args []string) ServerConfig {
 		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
 	f.StringVar(&sIntervalF, "i", "",
 		fmt.Sprintf("store interval (default: %s)", storeIntervalDefault))
-	f.StringVar(&sFIleF, "f", storeFileDefault,
+	f.StringVar(&sFIleF, "f", "",
 		fmt.Sprintf("store file (default: %s)", storeFileDefault))
 	f.BoolVar(&restoreF, "r", false, "restore from file at start")
 	f.StringVar(&keyF, "k", "", "key for HMAC (if not set responses will not be signed and hash from agent will not be checked)")
@@ -75,8 +75,6 @@ func GetServerConfig(args []string) ServerConfig {
 	}
 
 	// restore
-
-	fmt.Printf("isFlagPassed: %t", isFlagPassed("r", f))
 	if restoreEnv != "" {
 		restore, err := strconv.ParseBool(restoreEnv)
 		if err != nil {

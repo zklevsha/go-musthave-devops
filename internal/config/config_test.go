@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 )
 
 var testServerJSON = ServerConfigJSON{
@@ -16,13 +17,15 @@ var testServerJSON = ServerConfigJSON{
 	Key:            "test_hash",
 	DSN:            "postgres://username:password@localhost:5432/database_name",
 	PrivateKeyPath: "/tmp/test/private.pem",
+	StoreInterval:  "3m",
+	StoreFile:      "/tmp/test.json",
 }
 
 var testAgentConfig = AgentConfigJSON{
 	ServerAddress:  "http://server.test",
 	PollInterval:   "1s",
 	ReportInterval: "3s",
-	PublicKeyPath:  "/tmp/test/private.pem",
+	PublicKeyPath:  "/tmp/test/public.pem",
 	Key:            "test_hash",
 }
 
@@ -50,56 +53,100 @@ func deleteJson(fname string) {
 
 func TestGetAgentConfig(t *testing.T) {
 	tconf := testAgentConfig
+	tconfPollInterval, _ := time.ParseDuration(tconf.PollInterval)
+	tconfReportInterval, _ := time.ParseDuration(tconf.ReportInterval)
 	fname := "/tmp/TestLoadAgentConfig.json"
 	createJson(fname, tconf)
 	tt := []struct {
 		name string
 		args []string
+		want AgentConfig
 	}{
-		{name: "no flags", args: []string{}},
+		{name: "no flags", args: []string{},
+			want: AgentConfig{ServerAddress: serverAddressDefault,
+				PollInterval: pollIntervalDefault, ReportInterval: reportIntervalDefault}},
 		{name: "all flags", args: []string{"-a", "test_socket", "-c", "test_file.json",
-			"-crypto-key", "test.pem", "-k", "test_hash", "-p", "1s", "-r", "1"}},
-		{name: "read from file", args: []string{"-c", fname}},
-		{name: "bad duration", args: []string{"-p", "bad", "-r", "bad"}},
+			"-crypto-key", "test.pem", "-k", "test_hash", "-p", "5s", "-r", "20s"},
+			want: AgentConfig{ServerAddress: "test_socket", Key: "test_hash",
+				PollInterval: time.Second * 5, ReportInterval: time.Second * 20,
+				PublicKeyPath: "test.pem"}},
+		{name: "read from file", args: []string{"-c", fname},
+			want: AgentConfig{ServerAddress: tconf.ServerAddress,
+				Key: tconf.Key, PollInterval: tconfPollInterval,
+				ReportInterval: tconfReportInterval, PublicKeyPath: tconf.PublicKeyPath}},
+		{name: "bad duration", args: []string{"-p", "bad", "-r", "bad"},
+			want: AgentConfig{ServerAddress: serverAddressDefault,
+				PollInterval: pollIntervalDefault, ReportInterval: reportIntervalDefault}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			GetAgentConfig(tc.args)
+			res := GetAgentConfig(tc.args)
+			if res != tc.want {
+				t.Errorf("AgentConfig mismatch: have: %v,  want: %v", res, tc.want)
+			}
 		})
 	}
 	deleteJson(fname)
 }
 
 func TestAgentConfigEnv(t *testing.T) {
+	want := AgentConfig{PollInterval: time.Second * 25,
+		ReportInterval: time.Second * 14, ServerAddress: "test_serv",
+		Key: "test_hash", PublicKeyPath: "public.pem"}
 	t.Run("Get agent config with env variables", func(t *testing.T) {
-		t.Setenv("POLL_INTERVAL", "1s")
-		t.Setenv("REPORT_INTERVAL", "1s")
-		t.Setenv("ADDRESS", "test_serv")
-		t.Setenv("KEY", "test_hash")
-		t.Setenv("CRYPTO_KEY", "test.pem")
+		t.Setenv("POLL_INTERVAL", want.PollInterval.String())
+		t.Setenv("REPORT_INTERVAL", want.ReportInterval.String())
+		t.Setenv("ADDRESS", want.ServerAddress)
+		t.Setenv("KEY", want.Key)
+		t.Setenv("CRYPTO_KEY", want.PublicKeyPath)
 		t.Setenv("CONFIG", "test.json")
-		GetAgentConfig([]string{})
+		res := GetAgentConfig([]string{})
+		if res != want {
+			t.Errorf("AgentConfig mismatch: have: %v,  want: %v", res, want)
+		}
 	})
+
 }
 
 func TestGetServerConfigFlags(t *testing.T) {
 	tconf := testServerJSON
+	tconfStoreInterval, _ := time.ParseDuration(tconf.StoreInterval)
 	fname := "/tmp/TestLoadServerConfig.json"
 	createJson(fname, tconf)
 	tt := []struct {
 		name string
 		args []string
+		want ServerConfig
 	}{
-		{name: "no flags", args: []string{}},
-		{name: "all flags", args: []string{"-a", "server", "-c",
-			"config.json", "-d", "postgress//test:5432/tesd_db", "-f",
-			"/tmp/test.json", "-i", "1s", "-k", "hash"}},
-		{name: "read from file", args: []string{"-c", fname}},
-		{name: "bad store interval value", args: []string{"-i", "bad"}},
+		{name: "no flags", args: []string{},
+			want: ServerConfig{ServerAddress: serverAddressDefault,
+				StoreFile: storeFileDefault, StoreInterval: storeIntervalDefault,
+				Restore: false}},
+		{name: "all flags", args: []string{
+			"-a", "server", "-c", "config.json", "-f", "/tmp/test.json",
+			"-k", "hash",
+			"-d", "postgress//test:5432/tesd_db",
+			"-i", "1s", "-r", "-crypto-key", "private.pem"},
+			want: ServerConfig{
+				ServerAddress: "server", Key: "hash", DSN: "postgress//test:5432/tesd_db",
+				StoreFile: "/tmp/test.json", StoreInterval: time.Second,
+				Restore: true, UseDB: true, PrivateKeyPath: "private.pem"}},
+		{name: "read from file", args: []string{"-c", fname},
+			want: ServerConfig{ServerAddress: tconf.ServerAddress,
+				Key: tconf.Key, DSN: tconf.DSN,
+				StoreFile: tconf.StoreFile, StoreInterval: tconfStoreInterval,
+				Restore: false, UseDB: true, PrivateKeyPath: tconf.PrivateKeyPath}},
+		{name: "bad store interval value", args: []string{"-i", "bad"},
+			want: ServerConfig{ServerAddress: serverAddressDefault,
+				StoreFile: storeFileDefault, StoreInterval: storeIntervalDefault,
+				Restore: false, UseDB: false}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			GetServerConfig(tc.args)
+			res := GetServerConfig(tc.args)
+			if res != tc.want {
+				t.Errorf("serverConfig mismatch: have: %v, want:%v", res, tc.want)
+			}
 		})
 	}
 	deleteJson(fname)
@@ -113,9 +160,15 @@ func TestGetServerConfigEnv(t *testing.T) {
 		t.Setenv("RESTORE", "true")
 		t.Setenv("KEY", "test_hash")
 		t.Setenv("DATABASE_DSN", "test_dsn")
-		t.Setenv("CRYPTO_KEY", "test")
+		t.Setenv("CRYPTO_KEY", "private.pem")
 		t.Setenv("CONFIG", "test.json")
-		GetServerConfig([]string{})
+		res := GetServerConfig([]string{})
+		want := ServerConfig{ServerAddress: "testServ", StoreInterval: time.Second,
+			StoreFile: "storeFile", Restore: true, UseDB: true, Key: "test_hash", DSN: "test_dsn",
+			PrivateKeyPath: "private.pem"}
+		if res != want {
+			t.Errorf("ServerConfig mismatch: have: %v, want: %v", res, want)
+		}
 	})
 }
 
