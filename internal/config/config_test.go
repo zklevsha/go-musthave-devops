@@ -30,7 +30,7 @@ var testAgentConfig = AgentConfigJSON{
 }
 
 // creating json file
-func createJson(fname string, s interface{}) {
+func createJSON(fname string, s interface{}) {
 
 	file, err := json.Marshal(s)
 	if err != nil {
@@ -44,7 +44,7 @@ func createJson(fname string, s interface{}) {
 }
 
 // removing json file
-func deleteJson(fname string) {
+func deleteJSON(fname string) {
 	err := os.Remove(fname)
 	if err != nil {
 		log.Fatalf("cant delete %s: %s", fname, err.Error())
@@ -56,7 +56,7 @@ func TestGetAgentConfig(t *testing.T) {
 	tconfPollInterval, _ := time.ParseDuration(tconf.PollInterval)
 	tconfReportInterval, _ := time.ParseDuration(tconf.ReportInterval)
 	fname := "/tmp/TestLoadAgentConfig.json"
-	createJson(fname, tconf)
+	createJSON(fname, tconf)
 	tt := []struct {
 		name string
 		args []string
@@ -86,7 +86,7 @@ func TestGetAgentConfig(t *testing.T) {
 			}
 		})
 	}
-	deleteJson(fname)
+	deleteJSON(fname)
 }
 
 func TestAgentConfigEnv(t *testing.T) {
@@ -112,7 +112,7 @@ func TestGetServerConfigFlags(t *testing.T) {
 	tconf := testServerJSON
 	tconfStoreInterval, _ := time.ParseDuration(tconf.StoreInterval)
 	fname := "/tmp/TestLoadServerConfig.json"
-	createJson(fname, tconf)
+	createJSON(fname, tconf)
 	tt := []struct {
 		name string
 		args []string
@@ -149,7 +149,7 @@ func TestGetServerConfigFlags(t *testing.T) {
 			}
 		})
 	}
-	deleteJson(fname)
+	deleteJSON(fname)
 }
 
 func TestGetServerConfigEnv(t *testing.T) {
@@ -175,7 +175,7 @@ func TestGetServerConfigEnv(t *testing.T) {
 func TestLoadServerConfig(t *testing.T) {
 	tc := testServerJSON
 	fname := "/tmp/TestLoadServerConfig.json"
-	createJson(fname, tc)
+	createJSON(fname, tc)
 	t.Run("TestLoadServerConfig", func(t *testing.T) {
 		c, err := loadServerConfig(fname)
 		if err != nil {
@@ -186,13 +186,13 @@ func TestLoadServerConfig(t *testing.T) {
 			t.Errorf("structs does not match: have: %v, want: %v", c, tc)
 		}
 	})
-	deleteJson(fname)
+	deleteJSON(fname)
 }
 
 func TestLoadAgentConfig(t *testing.T) {
 	tc := testAgentConfig
 	fname := "/tmp/TestLoadAgentConfig.json"
-	createJson(fname, tc)
+	createJSON(fname, tc)
 	t.Run("TestLoadAgentConfig", func(t *testing.T) {
 		c, err := loadAgentConfig(fname)
 		if err != nil {
@@ -203,7 +203,7 @@ func TestLoadAgentConfig(t *testing.T) {
 			t.Errorf("structs does not match: have: %v, want: %v", c, tc)
 		}
 	})
-	deleteJson(fname)
+	deleteJSON(fname)
 }
 
 func TestIsFlagPassed(t *testing.T) {
