@@ -15,7 +15,7 @@ const dsn = "postgres://go-server:pgdbpwd@localhost:5532/go-musthave-devops_test
 
 var ctx = context.Background()
 
-func table_exists(tname string, d DBConnector) (bool, error) {
+func tableExists(tname string, d DBConnector) (bool, error) {
 	conn, err := d.Pool.Acquire(d.Ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to acquire connection: %s", err.Error())
@@ -39,7 +39,7 @@ func table_exists(tname string, d DBConnector) (bool, error) {
 		return false, fmt.Errorf("sql %s have returned more than 1 COUNT: %d", sql, count)
 	}
 }
-func init_db() DBConnector {
+func initDB() DBConnector {
 	d := DBConnector{Ctx: ctx, DSN: dsn}
 	err := d.Init()
 	if err != nil {
@@ -139,7 +139,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	t.Run("test Close()", func(t *testing.T) {
@@ -158,7 +158,7 @@ func TestClose(t *testing.T) {
 }
 
 func TestAvailable(t *testing.T) {
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	t.Run("test Available()", func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestGetGauge(t *testing.T) {
 	goodMetric := gauge{id: "test_metric", value: 154.33}
 	nonExitentMetric := gauge{id: "nx_metric", value: -1}
 
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	err := d.setGauge(goodMetric.id, goodMetric.value)
@@ -234,7 +234,7 @@ func TestSetGauge(t *testing.T) {
 	}
 	testGauge := gauge{id: "test_metric", value: 642.3278}
 
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	// run test cases
@@ -284,7 +284,7 @@ func TestGetAllGauges(t *testing.T) {
 		{id: "gauge2", value: 30},
 	}
 
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	for _, g := range testGauges {
@@ -329,7 +329,7 @@ func TestGetCounter(t *testing.T) {
 	goodMetric := counter{id: "test_metric", value: 190}
 	nonExitentMetric := counter{id: "nx_metric", value: -1}
 
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	err := d.increaseCounter(goodMetric.id, goodMetric.value)
@@ -384,7 +384,7 @@ func TestIncreaseCounter(t *testing.T) {
 	}
 	testCounter := counter{id: "test_metric", value: 100}
 
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	// run test cases
@@ -431,7 +431,7 @@ func TestResetCounter(t *testing.T) {
 	}
 	testCounter := counter{id: "test_metric", value: 100}
 
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	err := d.increaseCounter(testCounter.id, testCounter.value)
@@ -466,7 +466,7 @@ func TestResetCounter(t *testing.T) {
 
 func TestCreateTable(t *testing.T) {
 	// setup
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 	d.DropTables()
 
@@ -477,19 +477,19 @@ func TestCreateTable(t *testing.T) {
 			t.Errorf("CreateTables have returned an error: %s", err.Error())
 		}
 
-		gauges_exists, err := table_exists("gauges", d)
+		gaugesExist, err := tableExists("gauges", d)
 		if err != nil {
-			t.Errorf("table_exists() have returned an error: %s", err.Error())
+			t.Errorf("tableExists() have returned an error: %s", err.Error())
 		}
-		if !gauges_exists {
+		if !gaugesExist {
 			t.Errorf("table 'gauges' was not created")
 		}
 
-		counters_exist, err := table_exists("counters", d)
+		countersExist, err := tableExists("counters", d)
 		if err != nil {
-			t.Errorf("table_exists() have returned an error: %s", err.Error())
+			t.Errorf("tableExists() have returned an error: %s", err.Error())
 		}
-		if !counters_exist {
+		if !countersExist {
 			t.Errorf("table 'counters' was not created")
 		}
 	})
@@ -503,7 +503,7 @@ func TestCreateTable(t *testing.T) {
 
 func TestDropTable(t *testing.T) {
 	// setup
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
 	// run tests
@@ -513,17 +513,17 @@ func TestDropTable(t *testing.T) {
 			t.Errorf("DropTables have returned an error: %s", err.Error())
 		}
 
-		gauges_exists, err := table_exists("gauges", d)
+		gauges_exists, err := tableExists("gauges", d)
 		if err != nil {
-			t.Errorf("table_exists() have returned an error: %s", err.Error())
+			t.Errorf("tableExists() have returned an error: %s", err.Error())
 		}
 		if gauges_exists {
 			t.Errorf("table 'gauges' still exists")
 		}
 
-		counters_exist, err := table_exists("counters", d)
+		counters_exist, err := tableExists("counters", d)
 		if err != nil {
-			t.Errorf("table_exists() have returned an error: %s", err.Error())
+			t.Errorf("tableExists() have returned an error: %s", err.Error())
 		}
 		if counters_exist {
 			t.Errorf("table 'counters' still exists")
@@ -539,10 +539,10 @@ func TestDropTable(t *testing.T) {
 
 func TestUpdateMetrics(t *testing.T) {
 	// setup
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
-	var gaugeValue float64 = 13.120044
+	var gaugeValue = 13.120044
 	var counterValue int64 = 100
 
 	testMetrics := []structs.Metric{
@@ -583,10 +583,10 @@ func TestUpdateMetrics(t *testing.T) {
 
 func TestGetMetrics(t *testing.T) {
 	// setup
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
-	var gaugeValue float64 = 1134223.006574
+	var gaugeValue = 1134223.006574
 	var counterValue int64 = 100
 
 	testMetrics := []structs.Metric{
@@ -632,10 +632,10 @@ func TestGetMetrics(t *testing.T) {
 
 func TestGetMetric(t *testing.T) {
 	// setup
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
-	var gaugeValue float64 = 1134223.006574
+	var gaugeValue = 1134223.006574
 	var counterValue int64 = 100
 
 	testMetrics := []structs.Metric{
@@ -676,13 +676,13 @@ func TestGetMetric(t *testing.T) {
 
 func TestUpdateMetric(t *testing.T) {
 	// setup
-	d := init_db()
+	d := initDB()
 	defer d.Close()
 
-	var gaugeValue float64 = 1134223.006574
+	var gaugeValue = 1134223.006574
 	var counterDelta int64 = 100
 
-	var newGaugeValue float64 = 0.1
+	var newGaugeValue = 0.1
 	var newCounterDelta int64 = 1
 
 	var deltaWant = counterDelta + newCounterDelta
