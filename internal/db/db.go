@@ -328,7 +328,7 @@ func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
 				return fmt.Errorf("failed to update gauge %s(%f): %s", m.ID, *m.Value, err.Error())
 			}
 		default:
-			// we shuld not be here. Metric type were checked at serializer.DecodeBodyBatch()
+			// we shoudn`t be here. Metric type were checked at serializer.DecodeBodyBatch()
 			return structs.ErrMetricBadType
 		}
 	}
