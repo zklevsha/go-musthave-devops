@@ -1,0 +1,5 @@
+{
+    "address": ":8080",
+    "database_dsn": "postgres://go-server:pgdbpwd@localhost:5432/go-musthave-devops",
+    "crypto_key": "./private.pem"
+} 

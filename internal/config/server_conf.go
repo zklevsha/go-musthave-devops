@@ -9,23 +9,24 @@ import (
 	"time"
 )
 
-func GetServerConfig() ServerConfig {
+func GetServerConfig(args []string) ServerConfig {
 	var config ServerConfig
 	var addressF, sIntervalF, sFIleF, keyF, DSNf, privateKeyPathF, configPathF string
 	var restoreF bool
+	f := flag.NewFlagSet("server", flag.ExitOnError)
 
-	flag.StringVar(&addressF, "a", "",
+	f.StringVar(&addressF, "a", "",
 		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
-	flag.StringVar(&sIntervalF, "i", "",
+	f.StringVar(&sIntervalF, "i", "",
 		fmt.Sprintf("store interval (default: %s)", storeIntervalDefault))
-	flag.StringVar(&sFIleF, "f", storeFileDefault,
+	f.StringVar(&sFIleF, "f", "",
 		fmt.Sprintf("store file (default: %s)", storeFileDefault))
-	flag.BoolVar(&restoreF, "r", restoreDefault, "restore from file at start")
-	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set responses will not be signed and hash from agent will not be checked)")
-	flag.StringVar(&DSNf, "d", "", "database connection string (postgres://username:password@localhost:5432/database_name)")
-	flag.StringVar(&privateKeyPathF, "crypto-key", "", "path to private key to decryt messages with")
-	flag.StringVar(&configPathF, "c", "", "configuration path to use")
-	flag.Parse()
+	f.BoolVar(&restoreF, "r", false, "restore from file at start")
+	f.StringVar(&keyF, "k", "", "key for HMAC (if not set responses will not be signed and hash from agent will not be checked)")
+	f.StringVar(&DSNf, "d", "", "database connection string (postgres://username:password@localhost:5432/database_name)")
+	f.StringVar(&privateKeyPathF, "crypto-key", "", "path to private key to decryt messages with")
+	f.StringVar(&configPathF, "c", "", "configuration path to use")
+	f.Parse(args)
 
 	addressEnv := os.Getenv("ADDRESS")
 	sIntervalEnv := os.Getenv("STORE_INTERVAL")
@@ -83,12 +84,12 @@ func GetServerConfig() ServerConfig {
 		} else {
 			config.Restore = restore
 		}
-	} else if isFlagPassed("r") {
+	} else if isFlagPassed("r", f) {
 		config.Restore = restoreF
 	} else if configJSON.Restore != nil {
 		config.Restore = *configJSON.Restore
 	} else {
-		config.Restore = restoreDefault
+		config.Restore = false
 	}
 
 	// storeInterval

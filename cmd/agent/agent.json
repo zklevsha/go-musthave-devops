@@ -1,0 +1,5 @@
+{
+    "crypto_key": "./public.pem",
+    "report_interval": "3s",
+    "poll_interval": "1s"
+}

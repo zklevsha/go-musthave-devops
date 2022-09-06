@@ -9,20 +9,21 @@ import (
 	"time"
 )
 
-func GetAgentConfig() AgentConfig {
+func GetAgentConfig(args []string) AgentConfig {
 	var config AgentConfig
 
+	f := flag.NewFlagSet("agent", flag.ExitOnError)
 	var addressF, reportF, pollF, keyF, publicKeyPathF, configPathF string
-	flag.StringVar(&addressF, "a", "",
+	f.StringVar(&addressF, "a", "",
 		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
-	flag.StringVar(&reportF, "r", "",
+	f.StringVar(&reportF, "r", "",
 		fmt.Sprintf("report interval (default: %s)", serverAddressDefault))
-	flag.StringVar(&pollF, "p", "",
+	f.StringVar(&pollF, "p", "",
 		fmt.Sprintf("poll interval (default: %s)", pollIntervalDefault))
-	flag.StringVar(&keyF, "k", "", "key for HMAC (if not set messages will not be signed)")
-	flag.StringVar(&publicKeyPathF, "crypto-key", "", "server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
-	flag.StringVar(&configPathF, "c", "", "configuration file to use")
-	flag.Parse()
+	f.StringVar(&keyF, "k", "", "key for HMAC (if not set messages will not be signed)")
+	f.StringVar(&publicKeyPathF, "crypto-key", "", "server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
+	f.StringVar(&configPathF, "c", "", "configuration file to use")
+	f.Parse(args)
 
 	pollEnv := os.Getenv("POLL_INTERVAL")
 	reportEnv := os.Getenv("REPORT_INTERVAL")

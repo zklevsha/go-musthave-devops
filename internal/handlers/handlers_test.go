@@ -1,4 +1,4 @@
-package handlers_test
+package handlers
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/zklevsha/go-musthave-devops/internal/config"
-	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
@@ -70,7 +69,7 @@ func TestUpdateMeticHandler(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
+			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -106,7 +105,7 @@ func TestGetErrStatusCode(t *testing.T) {
 	// запускаем каждый тест
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			res := handlers.GetErrStatusCode(tc.err)
+			res := GetErrStatusCode(tc.err)
 			if res != tc.want {
 				t.Errorf("Expected HTTP status %d, got %d",
 					tc.want, res)
@@ -171,7 +170,7 @@ func TestUpdateMeticJSONHandler(t *testing.T) {
 			}
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
+			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -239,7 +238,7 @@ func TestUpdateMeticsBatchHandler(t *testing.T) {
 			}
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
+			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -320,7 +319,7 @@ func TestGetMetricHandler(t *testing.T) {
 			}
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, storage, nil)
+			router := GetHandler(config.ServerConfig{}, storage, nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -402,7 +401,7 @@ func TestGetMetricJSONHandler(t *testing.T) {
 			}
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, storage, nil)
+			router := GetHandler(config.ServerConfig{}, storage, nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -447,7 +446,7 @@ func TestPing(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
+			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -493,7 +492,7 @@ func TestRootHandler(t *testing.T) {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
-			router := handlers.GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
+			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
 			router.ServeHTTP(rr, req)
 			res := rr.Result()
 
@@ -517,7 +516,7 @@ func TestRootHandler(t *testing.T) {
 func TestGetHandler(t *testing.T) {
 	name := "testing GetHandler"
 	t.Run(name, func(t *testing.T) {
-		handlers.GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
+		GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
 	})
 
 }

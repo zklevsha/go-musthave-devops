@@ -12,14 +12,14 @@ import (
 )
 
 type DBConnector struct {
-	Ctx        context.Context
-	Pool       *pgxpool.Pool
-	DSN        string
-	initalized bool
+	Ctx         context.Context
+	Pool        *pgxpool.Pool
+	DSN         string
+	initialized bool
 }
 
 func (d *DBConnector) checkInit() error {
-	if !d.initalized {
+	if !d.initialized {
 		err := fmt.Errorf("DbConnector is not initiliazed (run DBConnector.Init() to initilize)")
 		return err
 	}
@@ -36,14 +36,14 @@ func (d *DBConnector) Init() error {
 	if err != nil {
 		return err
 	}
-	d.initalized = true
+	d.initialized = true
 	return nil
 }
 
 func (d *DBConnector) Close() {
-	if d.initalized {
+	if d.initialized {
 		d.Pool.Close()
-		d.initalized = false
+		d.initialized = false
 	}
 }
 
@@ -262,6 +262,28 @@ func (d *DBConnector) CreateTables() error {
 	return nil
 }
 
+func (d *DBConnector) DropTables() error {
+	conn, err := d.Pool.Acquire(d.Ctx)
+	defer conn.Release()
+	if err != nil {
+		return fmt.Errorf("failed to acquire connection: %s", err.Error())
+	}
+
+	countersSQL := "DROP TABLE IF EXISTS counters"
+	gaugesSQL := "DROP TABLE IF EXISTS gauges"
+
+	_, err = conn.Exec(d.Ctx, countersSQL)
+	if err != nil {
+		return fmt.Errorf("cant drop counters table: %s", err.Error())
+	}
+
+	_, err = conn.Exec(d.Ctx, gaugesSQL)
+	if err != nil {
+		return fmt.Errorf("cant drop gauge table: %s", err.Error())
+	}
+	return nil
+}
+
 func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
 	var err error
 	err = d.checkInit()
@@ -306,7 +328,7 @@ func (d *DBConnector) UpdateMetrics(metrics []structs.Metric) error {
 				return fmt.Errorf("failed to update gauge %s(%f): %s", m.ID, *m.Value, err.Error())
 			}
 		default:
-			// we shuld not be here. Metric type were checked at serializer.DecodeBodyBatch()
+			// we shoudn`t be here. Metric type were checked at serializer.DecodeBodyBatch()
 			return structs.ErrMetricBadType
 		}
 	}
@@ -331,11 +353,11 @@ func (d *DBConnector) GetMetrics() ([]structs.Metric, error) {
 	}
 
 	for k, v := range counters {
-		metrics = append(metrics, structs.Metric{ID: k, Delta: &v})
+		metrics = append(metrics, structs.Metric{ID: k, Delta: &v, MType: "counter"})
 	}
 
 	for k, v := range gauges {
-		metrics = append(metrics, structs.Metric{ID: k, Value: &v})
+		metrics = append(metrics, structs.Metric{ID: k, Value: &v, MType: "gauge"})
 	}
 
 	return metrics, nil

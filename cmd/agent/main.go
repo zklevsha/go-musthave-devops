@@ -32,7 +32,7 @@ func printStartupInfo() {
 
 func main() {
 	printStartupInfo()
-	agentConfig := config.GetAgentConfig()
+	agentConfig := config.GetAgentConfig(os.Args[1:])
 	log.Printf("INFO main agent config: PollInterval: %v, ReportInterval: %v, ServerAddress: %s, PublicKeyPath: %s",
 		agentConfig.PollInterval, agentConfig.ReportInterval, agentConfig.ServerAddress, agentConfig.PublicKeyPath)
 

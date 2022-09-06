@@ -43,10 +43,10 @@ func loadAgentConfig(path string) (AgentConfigJSON, error) {
 	return config, nil
 }
 
-// isFlagPassed checks if specific flag were passed at startup
-func isFlagPassed(name string) bool {
+// isFlagPassed проверяет был ли передан определенный флаг при старте
+func isFlagPassed(name string, fs *flag.FlagSet) bool {
 	found := false
-	flag.Visit(func(f *flag.Flag) {
+	fs.Visit(func(f *flag.Flag) {
 		if f.Name == name {
 			found = true
 		}
