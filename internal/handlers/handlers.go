@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 
@@ -40,9 +41,10 @@ func GetErrStatusCode(err error) int {
 }
 
 type Handlers struct {
-	Storage structs.Storage
-	key     string
-	privKey *rsa.PrivateKey
+	Storage       structs.Storage
+	key           string
+	privKey       *rsa.PrivateKey
+	trustedSubnet net.IPNet
 }
 
 func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int,
@@ -85,6 +87,7 @@ func (h *Handlers) sendResponse(w http.ResponseWriter, r *http.Request, code int
 // @Param  metricValue path string true "metric value"
 // @Success 200 {object} structs.Response
 // @Failure 400 {object} structs.Response
+// @Failure 403 {object} structs.Response
 // @Failure 501 {object} structs.Response
 // @Router /update/{metricType}/{metricID}/{metricValue} [post]
 func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +134,7 @@ func (h *Handlers) UpdateMeticHandler(w http.ResponseWriter, r *http.Request) {
 // @Param metrics body structs.Metric true "Metric to set/update"
 // @Success 200 {object} structs.Response
 // @Failure 400 {object} structs.Response
+// @Failure 403 {object} structs.Response
 // @Failure 501 {object} structs.Response
 // @Router /update/ [post]
 func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Request) {
@@ -181,6 +185,7 @@ func (h *Handlers) UpdateMetricJSONHandler(w http.ResponseWriter, r *http.Reques
 // @Param metrics body structs.Metrics true "List of metrics to set/update"
 // @Success 200 {object} structs.Response{}
 // @Failure 400 {object} structs.Response{}
+// @Failure 403 {object} structs.Response
 // @Failure 501 {object} structs.Response{}
 // @Router /updates/ [post]
 func (h *Handlers) UpdateMeticsBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -333,19 +338,56 @@ func (h *Handlers) ReadBodyMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (h *Handlers) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if h.trustedSubnet.String() == "0.0.0.0/0" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// check if client addres belongs to trusted network
+		ipStr := r.Header.Get("X-Real-IP")
+		if ipStr == "" {
+			h.sendResponse(w, r, http.StatusForbidden,
+				&structs.Response{Error: "X-Real-IP is not set"})
+			return
+		}
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			e := fmt.Sprintf("X-Real-IP=%s is not a valid IP", ipStr)
+			h.sendResponse(w, r, http.StatusForbidden,
+				&structs.Response{Error: e})
+			return
+		}
+		if !h.trustedSubnet.Contains(ip) {
+			h.sendResponse(w, r, http.StatusForbidden,
+				&structs.Response{Error: "Access denied"})
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func GetHandler(c config.ServerConfig, store structs.Storage, privKey *rsa.PrivateKey) http.Handler {
 	r := mux.NewRouter()
-	h := Handlers{key: c.Key, Storage: store, privKey: privKey}
+	h := Handlers{key: c.Key, Storage: store,
+		privKey:       privKey,
+		trustedSubnet: c.TrustedSubnet}
 
 	// root
 	r.HandleFunc("/", h.RootHandler)
 
 	// update metric (path parameters)
-	r.HandleFunc("/update/{metricType}/{metricID}/{metricValue}",
-		h.UpdateMeticHandler).Methods("POST")
+	chain := h.authMiddleware(
+		http.HandlerFunc(h.UpdateMeticHandler))
+	r.Handle("/update/{metricType}/{metricID}/{metricValue}",
+		chain).Methods("POST")
 
 	// update metric (body parameter)
-	chain := h.ReadBodyMiddleware(http.HandlerFunc(h.UpdateMetricJSONHandler))
+	chain = h.authMiddleware(
+		h.ReadBodyMiddleware(
+			http.HandlerFunc(h.UpdateMetricJSONHandler)))
 	r.Handle("/update/", chain).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
@@ -355,13 +397,15 @@ func GetHandler(c config.ServerConfig, store structs.Storage, privKey *rsa.Priva
 		h.GetMetricHandler).Methods("GET")
 
 	// get metric (body parameter)
-	chain = h.ReadBodyMiddleware(http.HandlerFunc(h.GetMetricJSONHandler))
+	chain = h.ReadBodyMiddleware(
+		http.HandlerFunc(h.GetMetricJSONHandler))
 	r.Handle("/value/", chain).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
 
 	// update multiple metrics
-	chain = h.ReadBodyMiddleware(http.HandlerFunc(h.UpdateMeticsBatchHandler))
+	chain = h.authMiddleware(h.ReadBodyMiddleware(
+		http.HandlerFunc(h.UpdateMeticsBatchHandler)))
 	r.Handle("/updates/", chain).
 		Methods("POST").
 		Headers("Content-Type", "application/json")
