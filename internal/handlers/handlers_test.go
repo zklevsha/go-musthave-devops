@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,6 +14,14 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/config"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
+
+var confNoAuth = config.ServerConfig{TrustedSubnet: net.IPNet{IP: net.IPv4(0, 0, 0, 0),
+	Mask: net.IPv4Mask(0, 0, 0, 0)}}
+var routerNoAuth = GetHandler(confNoAuth, structs.NewMemoryStorage(), nil)
+
+var confAuth = config.ServerConfig{TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
+	Mask: net.IPv4Mask(255, 255, 255, 0)}}
+var routerAuth = GetHandler(confAuth, structs.NewMemoryStorage(), nil)
 
 // TestUpdateMeticHandler
 func TestUpdateMeticHandler(t *testing.T) {
@@ -28,9 +37,11 @@ func TestUpdateMeticHandler(t *testing.T) {
 	}
 
 	tt := []struct {
-		name   string
-		metric metric
-		want   want
+		name    string
+		metric  metric
+		want    want
+		router  http.Handler
+		headers map[string]string
 	}{
 		{
 			name: "trying to update counter",
@@ -43,6 +54,7 @@ func TestUpdateMeticHandler(t *testing.T) {
 				code:     200,
 				response: "meassage:metric was saved;",
 			},
+			router: routerNoAuth,
 		},
 
 		{
@@ -56,6 +68,51 @@ func TestUpdateMeticHandler(t *testing.T) {
 				code:     200,
 				response: "meassage:metric was saved;",
 			},
+			router: routerNoAuth,
+		},
+
+		{
+			name: "trying to update gauge (no X-Real-IP)",
+			metric: metric{
+				metricType:  "gauge",
+				metricName:  "testGauge",
+				metricValue: "1.5",
+			},
+			want: want{
+				code:     403,
+				response: "error:X-Real-IP is not set;",
+			},
+			router: routerAuth,
+		},
+
+		{
+			name: "trying to update counter (X-Real-IP is not an IP)",
+			metric: metric{
+				metricType:  "counter",
+				metricName:  "testCounter",
+				metricValue: "1",
+			},
+			want: want{
+				code:     403,
+				response: "error:X-Real-IP=bad is not a valid IP;",
+			},
+			headers: map[string]string{"X-Real-IP": "bad"},
+			router:  routerAuth,
+		},
+
+		{
+			name: "trying to update counter (X-Real-IP is not trusted)",
+			metric: metric{
+				metricType:  "counter",
+				metricName:  "testCounter",
+				metricValue: "1",
+			},
+			want: want{
+				code:     403,
+				response: "error:Access denied;",
+			},
+			headers: map[string]string{"X-Real-IP": "1.1.1.1"},
+			router:  routerAuth,
 		},
 	}
 	for _, tc := range tt {
@@ -68,9 +125,11 @@ func TestUpdateMeticHandler(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			for k, v := range tc.headers {
+				req.Header.Set(k, v)
+			}
 			rr := httptest.NewRecorder()
-			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
-			router.ServeHTTP(rr, req)
+			tc.router.ServeHTTP(rr, req)
 			res := rr.Result()
 
 			if res.StatusCode != tc.want.code {
@@ -125,9 +184,11 @@ func TestUpdateMeticJSONHandler(t *testing.T) {
 	}
 
 	tt := []struct {
-		name   string
-		metric structs.Metric
-		want   want
+		name    string
+		metric  structs.Metric
+		want    want
+		router  http.Handler
+		headers map[string]string
 	}{
 		{
 			name: "trying to update counter",
@@ -141,6 +202,7 @@ func TestUpdateMeticJSONHandler(t *testing.T) {
 				code:     200,
 				response: "meassage:metric was saved;",
 			},
+			router: routerNoAuth,
 		},
 
 		{
@@ -154,6 +216,22 @@ func TestUpdateMeticJSONHandler(t *testing.T) {
 				code:     200,
 				response: "meassage:metric was saved;",
 			},
+			router: routerNoAuth,
+		},
+
+		{
+			name: "trying to update gauge (X-Real-IP is not trusted)",
+			metric: structs.Metric{
+				MType: "gauge",
+				ID:    "testGauge",
+				Value: &gauge,
+			},
+			want: want{
+				code:     403,
+				response: "error:Access denied;",
+			},
+			router:  routerAuth,
+			headers: map[string]string{"X-Real-IP": "1.1.1.1"},
 		},
 	}
 	for _, tc := range tt {
@@ -169,9 +247,11 @@ func TestUpdateMeticJSONHandler(t *testing.T) {
 				t.Fatal(err)
 			}
 			req.Header.Set("Content-Type", "application/json")
+			for k, v := range tc.headers {
+				req.Header.Set(k, v)
+			}
 			rr := httptest.NewRecorder()
-			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
-			router.ServeHTTP(rr, req)
+			tc.router.ServeHTTP(rr, req)
 			res := rr.Result()
 
 			if res.StatusCode != tc.want.code {
@@ -203,6 +283,8 @@ func TestUpdateMeticsBatchHandler(t *testing.T) {
 		want    want
 		name    string
 		metrics []structs.Metric
+		router  http.Handler
+		headers map[string]string
 	}{
 		{
 			name: "trying to update counter and gauge",
@@ -222,6 +304,28 @@ func TestUpdateMeticsBatchHandler(t *testing.T) {
 				code:     200,
 				response: "meassage:metrics batch was updated;",
 			},
+			router: routerNoAuth,
+		},
+
+		{
+			name: "trying to update counter and gauge (X-Real-IP is not set)",
+			metrics: []structs.Metric{
+				{
+					MType: "counter",
+					ID:    "testCounter",
+					Delta: &counter,
+				},
+				{
+					MType: "gauge",
+					ID:    "testGauge",
+					Value: &gauge,
+				},
+			},
+			want: want{
+				code:     403,
+				response: "error:X-Real-IP is not set;",
+			},
+			router: routerAuth,
 		},
 	}
 	for _, tc := range tt {
@@ -236,10 +340,12 @@ func TestUpdateMeticsBatchHandler(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			for k, v := range tc.headers {
+				req.Header.Set(k, v)
+			}
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
-			router := GetHandler(config.ServerConfig{}, structs.NewMemoryStorage(), nil)
-			router.ServeHTTP(rr, req)
+			tc.router.ServeHTTP(rr, req)
 			res := rr.Result()
 
 			if res.StatusCode != tc.want.code {

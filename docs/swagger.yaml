@@ -78,6 +78,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/structs.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/structs.Response'
         "501":
           description: Not Implemented
           schema:
@@ -119,6 +123,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/structs.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/structs.Response'
         "501":
           description: Not Implemented
           schema:
@@ -148,6 +156,10 @@ paths:
             $ref: '#/definitions/structs.Response'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/structs.Response'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/structs.Response'
         "501":

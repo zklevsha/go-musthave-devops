@@ -72,6 +72,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/structs.Response"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
                     "501": {
                         "description": "Not Implemented",
                         "schema": {
@@ -132,6 +138,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/structs.Response"
                         }
                     },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
                     "501": {
                         "description": "Not Implemented",
                         "schema": {
@@ -175,6 +187,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/structs.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/structs.Response"
                         }
