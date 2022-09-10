@@ -211,9 +211,9 @@ func TestGetServerConfigEnv(t *testing.T) {
 			PrivateKeyPath: "private.pem",
 			TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
 				Mask: net.IPv4Mask(255, 255, 255, 0)}}
-		compare_err := compareServerConfig(have, want)
-		if compare_err != "" {
-			t.Errorf("ServerConfig mismatch: %s", compare_err)
+		compareErr := compareServerConfig(have, want)
+		if compareErr != "" {
+			t.Errorf("ServerConfig mismatch: %s", compareErr)
 		}
 	})
 }
