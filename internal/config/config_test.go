@@ -185,9 +185,9 @@ func TestGetServerConfigFlags(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			have := GetServerConfig(tc.args)
-			compare_err := compareServerConfig(have, tc.want)
-			if compare_err != "" {
-				t.Errorf("ServerConfig mismatch: %s", compare_err)
+			compareErr := compareServerConfig(have, tc.want)
+			if compareErr != "" {
+				t.Errorf("ServerConfig mismatch: %s", compareErr)
 			}
 		})
 	}
