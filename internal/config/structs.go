@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 type AgentConfig struct {
 	ServerAddress  string
@@ -27,6 +30,7 @@ type ServerConfig struct {
 	UseDB          bool
 	Restore        bool
 	PrivateKeyPath string
+	TrustedSubnet  net.IPNet
 }
 
 type ServerConfigJSON struct {
@@ -37,4 +41,5 @@ type ServerConfigJSON struct {
 	StoreInterval  string `json:"store_interval,omitempty"`
 	Restore        *bool  `json:"restore,omitempty"`
 	PrivateKeyPath string `json:"crypto_key,omitempty"`
+	TrustedSubnet  string `json:"trusted_subnet,omitempty"`
 }

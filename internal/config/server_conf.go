@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"strconv"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 func GetServerConfig(args []string) ServerConfig {
 	var config ServerConfig
-	var addressF, sIntervalF, sFIleF, keyF, DSNf, privateKeyPathF, configPathF string
+	var addressF, sIntervalF, sFIleF, keyF, DSNf, privateKeyPathF, configPathF, trustSubnetF string
 	var restoreF bool
 	f := flag.NewFlagSet("server", flag.ExitOnError)
 
@@ -26,6 +27,7 @@ func GetServerConfig(args []string) ServerConfig {
 	f.StringVar(&DSNf, "d", "", "database connection string (postgres://username:password@localhost:5432/database_name)")
 	f.StringVar(&privateKeyPathF, "crypto-key", "", "path to private key to decryt messages with")
 	f.StringVar(&configPathF, "c", "", "configuration path to use")
+	f.StringVar(&trustSubnetF, "t", "", "network to accept connections from")
 	f.Parse(args)
 
 	addressEnv := os.Getenv("ADDRESS")
@@ -36,6 +38,7 @@ func GetServerConfig(args []string) ServerConfig {
 	DSNenv := os.Getenv("DATABASE_DSN")
 	privateKeyPathEnv := os.Getenv("CRYPTO_KEY")
 	configPathEnv := os.Getenv("CONFIG")
+	trunstedSubnetEnv := os.Getenv("TRUSTED_SUBNET")
 
 	// checking config file
 	var configJSON ServerConfigJSON
@@ -157,6 +160,39 @@ func GetServerConfig(args []string) ServerConfig {
 		config.PrivateKeyPath = privateKeyPathF
 	} else {
 		config.PrivateKeyPath = configJSON.PrivateKeyPath
+	}
+
+	// TrustedSubnet
+	if trunstedSubnetEnv != "" {
+		_, network, err := net.ParseCIDR(trunstedSubnetEnv)
+		if err != nil {
+			log.Printf("WARN can`t parse TRUSTED_SUBNET env variable (%s): %s. Default value will be used (%s)",
+				trunstedSubnetEnv, err, trunstedSubnetDefault.String())
+			config.TrustedSubnet = trunstedSubnetDefault
+		} else {
+			config.TrustedSubnet = *network
+		}
+	} else if trustSubnetF != "" {
+		_, network, err := net.ParseCIDR(trustSubnetF)
+		if err != nil {
+			log.Printf("WARN can`t parse -t flag variable (%s): %s. Default value will be used (%s)",
+				trustSubnetF, err, trunstedSubnetDefault.String())
+			config.TrustedSubnet = trunstedSubnetDefault
+		} else {
+			config.TrustedSubnet = *network
+		}
+	} else if configJSON.TrustedSubnet != "" {
+		_, network, err := net.ParseCIDR(configJSON.TrustedSubnet)
+		if err != nil {
+			log.Printf("WARN can`t parse  'trusted_subnet' configuration attribute (%s): %s."+
+				"Default value will be used (%s)",
+				configJSON.TrustedSubnet, err.Error(), trunstedSubnetDefault)
+			config.TrustedSubnet = trunstedSubnetDefault
+		} else {
+			config.TrustedSubnet = *network
+		}
+	} else {
+		config.TrustedSubnet = trunstedSubnetDefault
 	}
 
 	return config

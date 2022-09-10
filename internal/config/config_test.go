@@ -6,11 +6,49 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
+
+func compareServerConfig(have ServerConfig, want ServerConfig) string {
+	var mismatch []string
+	if have.ServerAddress != want.ServerAddress {
+		mismatch = append(mismatch,
+			fmt.Sprintf("ServerAddress have:%s, want:%s", have.ServerAddress, want.ServerAddress))
+	}
+	if have.Key != want.Key {
+		mismatch = append(mismatch,
+			fmt.Sprintf("Key have:%s, want:%s", have.Key, want.Key))
+	}
+	if have.DSN != want.DSN {
+		mismatch = append(mismatch,
+			fmt.Sprintf("DSN have:%s, want:%s", have.DSN, want.DSN))
+	}
+	if have.PrivateKeyPath != want.PrivateKeyPath {
+		mismatch = append(mismatch,
+			fmt.Sprintf("PrivateKeyPath have:%s, want:%s",
+				have.PrivateKeyPath, want.PrivateKeyPath))
+	}
+	if have.StoreInterval != want.StoreInterval {
+		mismatch = append(mismatch,
+			fmt.Sprintf("StoreInterval have:%s, want:%s",
+				have.StoreInterval, want.StoreInterval))
+	}
+	if have.StoreFile != want.StoreFile {
+		mismatch = append(mismatch,
+			fmt.Sprintf("StoreFile have:%s, want:%s", have.StoreFile, want.StoreFile))
+	}
+	if have.TrustedSubnet.String() != want.TrustedSubnet.String() {
+		mismatch = append(mismatch,
+			fmt.Sprintf("TrustedSubnet have:%s want:%s",
+				have.TrustedSubnet.String(), want.TrustedSubnet.String()))
+	}
+	return strings.Join(mismatch, ";")
+}
 
 var testServerJSON = ServerConfigJSON{
 	ServerAddress:  "http://server.test",
@@ -19,6 +57,7 @@ var testServerJSON = ServerConfigJSON{
 	PrivateKeyPath: "/tmp/test/private.pem",
 	StoreInterval:  "3m",
 	StoreFile:      "/tmp/test.json",
+	TrustedSubnet:  "192.168.23.0/24",
 }
 
 var testAgentConfig = AgentConfigJSON{
@@ -121,31 +160,34 @@ func TestGetServerConfigFlags(t *testing.T) {
 		{name: "no flags", args: []string{},
 			want: ServerConfig{ServerAddress: serverAddressDefault,
 				StoreFile: storeFileDefault, StoreInterval: storeIntervalDefault,
-				Restore: false}},
+				Restore:       false,
+				TrustedSubnet: trunstedSubnetDefault}},
 		{name: "all flags", args: []string{
 			"-a", "server", "-c", "config.json", "-f", "/tmp/test.json",
 			"-k", "hash",
 			"-d", "postgress//test:5432/tesd_db",
-			"-i", "1s", "-r", "-crypto-key", "private.pem"},
+			"-i", "1s", "-r", "-crypto-key", "private.pem",
+			"-t", "192.168.23.0/24"},
 			want: ServerConfig{
 				ServerAddress: "server", Key: "hash", DSN: "postgress//test:5432/tesd_db",
 				StoreFile: "/tmp/test.json", StoreInterval: time.Second,
-				Restore: true, UseDB: true, PrivateKeyPath: "private.pem"}},
+				Restore: true, UseDB: true, PrivateKeyPath: "private.pem",
+				TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
+					Mask: net.IPv4Mask(255, 255, 255, 0)}}},
 		{name: "read from file", args: []string{"-c", fname},
 			want: ServerConfig{ServerAddress: tconf.ServerAddress,
 				Key: tconf.Key, DSN: tconf.DSN,
 				StoreFile: tconf.StoreFile, StoreInterval: tconfStoreInterval,
-				Restore: false, UseDB: true, PrivateKeyPath: tconf.PrivateKeyPath}},
-		{name: "bad store interval value", args: []string{"-i", "bad"},
-			want: ServerConfig{ServerAddress: serverAddressDefault,
-				StoreFile: storeFileDefault, StoreInterval: storeIntervalDefault,
-				Restore: false, UseDB: false}},
+				Restore: false, UseDB: true, PrivateKeyPath: tconf.PrivateKeyPath,
+				TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
+					Mask: net.IPv4Mask(255, 255, 255, 0)}}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			res := GetServerConfig(tc.args)
-			if res != tc.want {
-				t.Errorf("serverConfig mismatch: have: %v, want:%v", res, tc.want)
+			have := GetServerConfig(tc.args)
+			compare_err := compareServerConfig(have, tc.want)
+			if compare_err != "" {
+				t.Errorf("ServerConfig mismatch: %s", compare_err)
 			}
 		})
 	}
@@ -162,12 +204,16 @@ func TestGetServerConfigEnv(t *testing.T) {
 		t.Setenv("DATABASE_DSN", "test_dsn")
 		t.Setenv("CRYPTO_KEY", "private.pem")
 		t.Setenv("CONFIG", "test.json")
-		res := GetServerConfig([]string{})
+		t.Setenv("TRUSTED_SUBNET", "192.168.23.0/24")
+		have := GetServerConfig([]string{})
 		want := ServerConfig{ServerAddress: "testServ", StoreInterval: time.Second,
 			StoreFile: "storeFile", Restore: true, UseDB: true, Key: "test_hash", DSN: "test_dsn",
-			PrivateKeyPath: "private.pem"}
-		if res != want {
-			t.Errorf("ServerConfig mismatch: have: %v, want: %v", res, want)
+			PrivateKeyPath: "private.pem",
+			TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
+				Mask: net.IPv4Mask(255, 255, 255, 0)}}
+		compare_err := compareServerConfig(have, want)
+		if compare_err != "" {
+			t.Errorf("ServerConfig mismatch: %s", compare_err)
 		}
 	})
 }
