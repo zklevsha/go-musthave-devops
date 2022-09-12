@@ -31,6 +31,7 @@ type ServerConfig struct {
 	Restore        bool
 	PrivateKeyPath string
 	TrustedSubnet  net.IPNet
+	GRPCAddress    string
 }
 
 type ServerConfigJSON struct {
@@ -42,4 +43,5 @@ type ServerConfigJSON struct {
 	Restore        *bool  `json:"restore,omitempty"`
 	PrivateKeyPath string `json:"crypto_key,omitempty"`
 	TrustedSubnet  string `json:"trusted_subnet,omitempty"`
+	GRPCAddress    string `json:"grpc_address,omitempty"`
 }
