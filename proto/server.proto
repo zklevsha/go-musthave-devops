@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+option go_package = "./pb";
+
+
+
+message Metric {
+    string ID  = 1;
+    string MType  = 2;
+    int64 Delta  = 3;
+    double Value  = 4; 
+    string Hash  = 5;
+}
+
+message Response {
+  string Message  = 1;
+  string Error = 2;
+  string Hash = 3;
+}
+
+message UpdateMetricRequest{ Metric metric = 1; }
+message UpdateMetricResponse { Response response = 1; }
+
+service Monitoring {
+  rpc UpdateMetric(UpdateMetricRequest) returns (UpdateMetricResponse) {}
+}
