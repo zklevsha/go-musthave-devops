@@ -21,10 +21,11 @@ func GetAgentConfig(args []string) AgentConfig {
 	f.StringVar(&pollF, "p", "",
 		fmt.Sprintf("poll interval (default: %s)", pollIntervalDefault))
 	f.StringVar(&keyF, "k", "", "key for HMAC (if not set messages will not be signed)")
-	f.StringVar(&publicKeyPathF, "crypto-key", "", "server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
+	f.StringVar(&publicKeyPathF, "crypto-key", "",
+		"server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
 	f.StringVar(&configPathF, "c", "", "configuration file to use")
 	f.StringVar(&gAddressF, "g", "",
-		fmt.Sprintf("server`s gRPC socket (default: %s)", gAddressDefault))
+		"server`s gRPC socket (if not set, metrics will be sent via REST)")
 	f.Parse(args)
 
 	pollEnv := os.Getenv("POLL_INTERVAL")

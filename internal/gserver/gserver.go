@@ -20,7 +20,7 @@ type server struct {
 
 func (s *server) UpdateMetric(ctx context.Context, in *pb.UpdateMetricRequest) (*pb.UpdateMetricResponse, error) {
 	log.Printf("INFO Received gRPC request: %v, params: %s", in.ProtoReflect().Descriptor().FullName(), in.String())
-	m, err := serializer.DecodeGrpcMetric(in.Metric)
+	m, err := serializer.DecodeGRPCMetric(in.Metric)
 	if err != nil {
 		response := pb.Response{Message: "", Error: err.Error()}
 		return &pb.UpdateMetricResponse{Response: &response}, nil

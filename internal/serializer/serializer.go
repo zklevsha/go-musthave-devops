@@ -153,7 +153,7 @@ func EncodeMetrics(store structs.Storage) ([]byte, error) {
 	return json, nil
 }
 
-func DecodeGrpcMetric(in *pb.Metric) (structs.Metric, error) {
+func DecodeGRPCMetric(in *pb.Metric) (structs.Metric, error) {
 	if in == nil {
 		return structs.Metric{}, fmt.Errorf("*pb.Metric is nil")
 	}
@@ -174,4 +174,22 @@ func DecodeGrpcMetric(in *pb.Metric) (structs.Metric, error) {
 
 	return m, nil
 
+}
+
+func EncodeGRPCMetric(m structs.Metric) (*pb.Metric, error) {
+	p := pb.Metric{
+		Id:    m.ID,
+		Mtype: m.MType,
+		Hash:  m.Hash,
+	}
+
+	if m.MType == "gauge" {
+		p.Value = *m.Value
+	} else if m.MType == "counter" {
+		p.Delta = *m.Delta
+	} else {
+		return nil, fmt.Errorf("metric type %s is not supported", m.MType)
+	}
+
+	return &p, nil
 }
