@@ -73,6 +73,7 @@ var testAgentConfig = AgentConfigJSON{
 	ReportInterval: "3s",
 	PublicKeyPath:  "/tmp/test/public.pem",
 	Key:            "test_hash",
+	GRPCAddress:    "1.1.1.1:5429",
 }
 
 // creating json file
@@ -112,14 +113,16 @@ func TestGetAgentConfig(t *testing.T) {
 			want: AgentConfig{ServerAddress: serverAddressDefault,
 				PollInterval: pollIntervalDefault, ReportInterval: reportIntervalDefault}},
 		{name: "all flags", args: []string{"-a", "test_socket", "-c", "test_file.json",
-			"-crypto-key", "test.pem", "-k", "test_hash", "-p", "5s", "-r", "20s"},
+			"-crypto-key", "test.pem", "-k", "test_hash", "-p", "5s", "-r", "20s",
+			"-g", "1.1.1.1:5429"},
 			want: AgentConfig{ServerAddress: "test_socket", Key: "test_hash",
 				PollInterval: time.Second * 5, ReportInterval: time.Second * 20,
-				PublicKeyPath: "test.pem"}},
+				PublicKeyPath: "test.pem", GRPCAddress: "1.1.1.1:5429"}},
 		{name: "read from file", args: []string{"-c", fname},
 			want: AgentConfig{ServerAddress: tconf.ServerAddress,
 				Key: tconf.Key, PollInterval: tconfPollInterval,
-				ReportInterval: tconfReportInterval, PublicKeyPath: tconf.PublicKeyPath}},
+				ReportInterval: tconfReportInterval, PublicKeyPath: tconf.PublicKeyPath,
+				GRPCAddress: tconf.GRPCAddress}},
 		{name: "bad duration", args: []string{"-p", "bad", "-r", "bad"},
 			want: AgentConfig{ServerAddress: serverAddressDefault,
 				PollInterval: pollIntervalDefault, ReportInterval: reportIntervalDefault}},
@@ -138,7 +141,7 @@ func TestGetAgentConfig(t *testing.T) {
 func TestAgentConfigEnv(t *testing.T) {
 	want := AgentConfig{PollInterval: time.Second * 25,
 		ReportInterval: time.Second * 14, ServerAddress: "test_serv",
-		Key: "test_hash", PublicKeyPath: "public.pem"}
+		Key: "test_hash", PublicKeyPath: "public.pem", GRPCAddress: "1.1.1.1:1244"}
 	t.Run("Get agent config with env variables", func(t *testing.T) {
 		t.Setenv("POLL_INTERVAL", want.PollInterval.String())
 		t.Setenv("REPORT_INTERVAL", want.ReportInterval.String())
@@ -146,6 +149,7 @@ func TestAgentConfigEnv(t *testing.T) {
 		t.Setenv("KEY", want.Key)
 		t.Setenv("CRYPTO_KEY", want.PublicKeyPath)
 		t.Setenv("CONFIG", "test.json")
+		t.Setenv("GRPC_ADDRESS", want.GRPCAddress)
 		res := GetAgentConfig([]string{})
 		if res != want {
 			t.Errorf("AgentConfig mismatch: have: %v,  want: %v", res, want)

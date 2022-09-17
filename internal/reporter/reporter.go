@@ -19,7 +19,7 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/storage"
 )
 
-func send(url string, body []byte, pubKey *rsa.PublicKey) error {
+func sendREST(url string, body []byte, pubKey *rsa.PublicKey) error {
 	client := &http.Client{}
 	var b []byte
 	var err error
@@ -64,7 +64,7 @@ func send(url string, body []byte, pubKey *rsa.PublicKey) error {
 	return nil
 }
 
-func reportMetrics(conf config.AgentConfig, pubKey *rsa.PublicKey) {
+func reportMetricsREST(conf config.AgentConfig, pubKey *rsa.PublicKey) {
 	url := fmt.Sprintf("http://%s/update/", conf.ServerAddress)
 	metircs, err := storage.Agent.GetMetrics()
 	if err != nil {
@@ -76,7 +76,7 @@ func reportMetrics(conf config.AgentConfig, pubKey *rsa.PublicKey) {
 			log.Printf("ERROR failed to encode metrics: %s", err.Error())
 			continue
 		}
-		err = send(url, body, pubKey)
+		err = sendREST(url, body, pubKey)
 		if err != nil {
 			log.Printf("ERROR failed to send metric %s: %s", m.ID, err.Error())
 			continue
@@ -91,17 +91,20 @@ func reportMetrics(conf config.AgentConfig, pubKey *rsa.PublicKey) {
 	}
 }
 
+func reportMetricsGRPS() {
+
+}
+
 func Report(ctx context.Context, wg *sync.WaitGroup, conf config.AgentConfig, pubKey *rsa.PublicKey) {
 	defer wg.Done()
 	ticker := time.NewTicker(conf.ReportInterval)
-
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("INFO report received ctx.Done(), returning")
 			return
 		case <-ticker.C:
-			reportMetrics(conf, pubKey)
+			reportMetricsREST(conf, pubKey)
 		}
 	}
 }

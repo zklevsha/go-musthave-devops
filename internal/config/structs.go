@@ -7,10 +7,11 @@ import (
 
 type AgentConfig struct {
 	ServerAddress  string
-	Key            string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	Key            string
 	PublicKeyPath  string
+	GRPCAddress    string
 }
 
 type AgentConfigJSON struct {
@@ -19,6 +20,7 @@ type AgentConfigJSON struct {
 	ReportInterval string `json:"report_interval,omitempty"`
 	PublicKeyPath  string `json:"crypto_key,omitempty"`
 	Key            string `json:"hash_key,omitempty"`
+	GRPCAddress    string `json:"grpc_address,omitempty"`
 }
 
 type ServerConfig struct {
