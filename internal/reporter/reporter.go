@@ -112,12 +112,12 @@ func reportMetricsGRPC(ctx context.Context, conf config.AgentConfig) {
 	client := pb.NewMonitoringClient(conn)
 
 	for _, m := range metircs {
-		in_m, err := serializer.EncodeGRPCMetric(m)
+		inM, err := serializer.EncodeGRPCMetric(m)
 		if err != nil {
 			log.Printf("ERROR failed to encode metric %s to gRPC: %s", m.ID, err.Error())
 			continue
 		}
-		resp, err := client.UpdateMetric(ctx, &pb.UpdateMetricRequest{Metric: in_m})
+		resp, err := client.UpdateMetric(ctx, &pb.UpdateMetricRequest{Metric: inM})
 		if err != nil {
 			log.Printf("ERROR failed to send metric %s to gRPC server: %s", m.ID, err.Error())
 			continue
