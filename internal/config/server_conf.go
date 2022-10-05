@@ -12,7 +12,7 @@ import (
 
 func GetServerConfig(args []string) ServerConfig {
 	var config ServerConfig
-	var addressF, sIntervalF, sFIleF, keyF, DSNf, privateKeyPathF, configPathF, trustSubnetF string
+	var addressF, sIntervalF, sFIleF, keyF, DSNf, privateKeyPathF, configPathF, trustSubnetF, gAddressF string
 	var restoreF bool
 	f := flag.NewFlagSet("server", flag.ExitOnError)
 
@@ -28,6 +28,8 @@ func GetServerConfig(args []string) ServerConfig {
 	f.StringVar(&privateKeyPathF, "crypto-key", "", "path to private key to decryt messages with")
 	f.StringVar(&configPathF, "c", "", "configuration path to use")
 	f.StringVar(&trustSubnetF, "t", "", "network to accept connections from")
+	f.StringVar(&gAddressF, "g", "",
+		fmt.Sprintf("gRPC socket (default: %s)", gAddressDefault))
 	f.Parse(args)
 
 	addressEnv := os.Getenv("ADDRESS")
@@ -39,6 +41,7 @@ func GetServerConfig(args []string) ServerConfig {
 	privateKeyPathEnv := os.Getenv("CRYPTO_KEY")
 	configPathEnv := os.Getenv("CONFIG")
 	trunstedSubnetEnv := os.Getenv("TRUSTED_SUBNET")
+	gAddressEnv := os.Getenv("GRPC_ADDRESS")
 
 	// checking config file
 	var configJSON ServerConfigJSON
@@ -193,6 +196,17 @@ func GetServerConfig(args []string) ServerConfig {
 		}
 	} else {
 		config.TrustedSubnet = trunstedSubnetDefault
+	}
+
+	// gRPC address
+	if gAddressEnv != "" {
+		config.GRPCAddress = gAddressEnv
+	} else if gAddressF != "" {
+		config.GRPCAddress = gAddressF
+	} else if configJSON.GRPCAddress != "" {
+		config.GRPCAddress = configJSON.GRPCAddress
+	} else {
+		config.GRPCAddress = gAddressDefault
 	}
 
 	return config

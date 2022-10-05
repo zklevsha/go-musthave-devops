@@ -47,25 +47,33 @@ func compareServerConfig(have ServerConfig, want ServerConfig) string {
 			fmt.Sprintf("TrustedSubnet have:%s want:%s",
 				have.TrustedSubnet.String(), want.TrustedSubnet.String()))
 	}
+
+	if have.GRPCAddress != want.GRPCAddress {
+		mismatch = append(mismatch,
+			fmt.Sprintf("GRPCAddress have:%s want:%s",
+				have.GRPCAddress, want.GRPCAddress))
+	}
 	return strings.Join(mismatch, ";")
 }
 
 var testServerJSON = ServerConfigJSON{
-	ServerAddress:  "http://server.test",
+	ServerAddress:  "1.1.1.1:8080",
 	Key:            "test_hash",
 	DSN:            "postgres://username:password@localhost:5432/database_name",
 	PrivateKeyPath: "/tmp/test/private.pem",
 	StoreInterval:  "3m",
 	StoreFile:      "/tmp/test.json",
 	TrustedSubnet:  "192.168.23.0/24",
+	GRPCAddress:    "1.1.1.1:5429",
 }
 
 var testAgentConfig = AgentConfigJSON{
-	ServerAddress:  "http://server.test",
+	ServerAddress:  "1.1.1.1:8080",
 	PollInterval:   "1s",
 	ReportInterval: "3s",
 	PublicKeyPath:  "/tmp/test/public.pem",
 	Key:            "test_hash",
+	GRPCAddress:    "1.1.1.1:5429",
 }
 
 // creating json file
@@ -105,14 +113,16 @@ func TestGetAgentConfig(t *testing.T) {
 			want: AgentConfig{ServerAddress: serverAddressDefault,
 				PollInterval: pollIntervalDefault, ReportInterval: reportIntervalDefault}},
 		{name: "all flags", args: []string{"-a", "test_socket", "-c", "test_file.json",
-			"-crypto-key", "test.pem", "-k", "test_hash", "-p", "5s", "-r", "20s"},
+			"-crypto-key", "test.pem", "-k", "test_hash", "-p", "5s", "-r", "20s",
+			"-g", "1.1.1.1:5429"},
 			want: AgentConfig{ServerAddress: "test_socket", Key: "test_hash",
 				PollInterval: time.Second * 5, ReportInterval: time.Second * 20,
-				PublicKeyPath: "test.pem"}},
+				PublicKeyPath: "test.pem", GRPCAddress: "1.1.1.1:5429"}},
 		{name: "read from file", args: []string{"-c", fname},
 			want: AgentConfig{ServerAddress: tconf.ServerAddress,
 				Key: tconf.Key, PollInterval: tconfPollInterval,
-				ReportInterval: tconfReportInterval, PublicKeyPath: tconf.PublicKeyPath}},
+				ReportInterval: tconfReportInterval, PublicKeyPath: tconf.PublicKeyPath,
+				GRPCAddress: tconf.GRPCAddress}},
 		{name: "bad duration", args: []string{"-p", "bad", "-r", "bad"},
 			want: AgentConfig{ServerAddress: serverAddressDefault,
 				PollInterval: pollIntervalDefault, ReportInterval: reportIntervalDefault}},
@@ -131,7 +141,7 @@ func TestGetAgentConfig(t *testing.T) {
 func TestAgentConfigEnv(t *testing.T) {
 	want := AgentConfig{PollInterval: time.Second * 25,
 		ReportInterval: time.Second * 14, ServerAddress: "test_serv",
-		Key: "test_hash", PublicKeyPath: "public.pem"}
+		Key: "test_hash", PublicKeyPath: "public.pem", GRPCAddress: "1.1.1.1:1244"}
 	t.Run("Get agent config with env variables", func(t *testing.T) {
 		t.Setenv("POLL_INTERVAL", want.PollInterval.String())
 		t.Setenv("REPORT_INTERVAL", want.ReportInterval.String())
@@ -139,6 +149,7 @@ func TestAgentConfigEnv(t *testing.T) {
 		t.Setenv("KEY", want.Key)
 		t.Setenv("CRYPTO_KEY", want.PublicKeyPath)
 		t.Setenv("CONFIG", "test.json")
+		t.Setenv("GRPC_ADDRESS", want.GRPCAddress)
 		res := GetAgentConfig([]string{})
 		if res != want {
 			t.Errorf("AgentConfig mismatch: have: %v,  want: %v", res, want)
@@ -161,26 +172,30 @@ func TestGetServerConfigFlags(t *testing.T) {
 			want: ServerConfig{ServerAddress: serverAddressDefault,
 				StoreFile: storeFileDefault, StoreInterval: storeIntervalDefault,
 				Restore:       false,
-				TrustedSubnet: trunstedSubnetDefault}},
+				TrustedSubnet: trunstedSubnetDefault,
+				GRPCAddress:   gAddressDefault}},
 		{name: "all flags", args: []string{
 			"-a", "server", "-c", "config.json", "-f", "/tmp/test.json",
 			"-k", "hash",
 			"-d", "postgress//test:5432/tesd_db",
 			"-i", "1s", "-r", "-crypto-key", "private.pem",
-			"-t", "192.168.23.0/24"},
+			"-t", "192.168.23.0/24", "-g", "1.1.1.1:5429"},
 			want: ServerConfig{
 				ServerAddress: "server", Key: "hash", DSN: "postgress//test:5432/tesd_db",
 				StoreFile: "/tmp/test.json", StoreInterval: time.Second,
 				Restore: true, UseDB: true, PrivateKeyPath: "private.pem",
 				TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
-					Mask: net.IPv4Mask(255, 255, 255, 0)}}},
+					Mask: net.IPv4Mask(255, 255, 255, 0)},
+				GRPCAddress: "1.1.1.1:5429"},
+		},
 		{name: "read from file", args: []string{"-c", fname},
 			want: ServerConfig{ServerAddress: tconf.ServerAddress,
 				Key: tconf.Key, DSN: tconf.DSN,
 				StoreFile: tconf.StoreFile, StoreInterval: tconfStoreInterval,
 				Restore: false, UseDB: true, PrivateKeyPath: tconf.PrivateKeyPath,
 				TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
-					Mask: net.IPv4Mask(255, 255, 255, 0)}}},
+					Mask: net.IPv4Mask(255, 255, 255, 0)},
+				GRPCAddress: tconf.GRPCAddress}},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
@@ -205,12 +220,14 @@ func TestGetServerConfigEnv(t *testing.T) {
 		t.Setenv("CRYPTO_KEY", "private.pem")
 		t.Setenv("CONFIG", "test.json")
 		t.Setenv("TRUSTED_SUBNET", "192.168.23.0/24")
+		t.Setenv("GRPC_ADDRESS", "1.1.1.1:1244")
 		have := GetServerConfig([]string{})
 		want := ServerConfig{ServerAddress: "testServ", StoreInterval: time.Second,
 			StoreFile: "storeFile", Restore: true, UseDB: true, Key: "test_hash", DSN: "test_dsn",
 			PrivateKeyPath: "private.pem",
 			TrustedSubnet: net.IPNet{IP: net.IPv4(192, 168, 23, 0),
-				Mask: net.IPv4Mask(255, 255, 255, 0)}}
+				Mask: net.IPv4Mask(255, 255, 255, 0)},
+			GRPCAddress: "1.1.1.1:1244"}
 		compareErr := compareServerConfig(have, want)
 		if compareErr != "" {
 			t.Errorf("ServerConfig mismatch: %s", compareErr)

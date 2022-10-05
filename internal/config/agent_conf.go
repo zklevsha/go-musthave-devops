@@ -13,16 +13,19 @@ func GetAgentConfig(args []string) AgentConfig {
 	var config AgentConfig
 
 	f := flag.NewFlagSet("agent", flag.ExitOnError)
-	var addressF, reportF, pollF, keyF, publicKeyPathF, configPathF string
+	var addressF, reportF, pollF, keyF, publicKeyPathF, configPathF, gAddressF string
 	f.StringVar(&addressF, "a", "",
-		fmt.Sprintf("server socket (default: %s)", serverAddressDefault))
+		fmt.Sprintf("server`s socket (default: %s)", serverAddressDefault))
 	f.StringVar(&reportF, "r", "",
 		fmt.Sprintf("report interval (default: %s)", serverAddressDefault))
 	f.StringVar(&pollF, "p", "",
 		fmt.Sprintf("poll interval (default: %s)", pollIntervalDefault))
 	f.StringVar(&keyF, "k", "", "key for HMAC (if not set messages will not be signed)")
-	f.StringVar(&publicKeyPathF, "crypto-key", "", "server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
+	f.StringVar(&publicKeyPathF, "crypto-key", "",
+		"server`s public key to encrypt the messages with (if not set messages will not be encrypted)")
 	f.StringVar(&configPathF, "c", "", "configuration file to use")
+	f.StringVar(&gAddressF, "g", "",
+		"server`s gRPC socket (if not set, metrics will be sent via REST)")
 	f.Parse(args)
 
 	pollEnv := os.Getenv("POLL_INTERVAL")
@@ -31,6 +34,7 @@ func GetAgentConfig(args []string) AgentConfig {
 	keyEnv := os.Getenv("KEY")
 	publicKeyPathEnv := os.Getenv("CRYPTO_KEY")
 	configPathEnv := os.Getenv("CONFIG")
+	gAddressEnv := os.Getenv("GRPC_ADDRESS")
 
 	// checking config file
 	var configJSON AgentConfigJSON
@@ -139,6 +143,15 @@ func GetAgentConfig(args []string) AgentConfig {
 		config.PublicKeyPath = publicKeyPathF
 	} else {
 		config.PublicKeyPath = configJSON.PublicKeyPath
+	}
+
+	// gRPC address
+	if gAddressEnv != "" {
+		config.GRPCAddress = gAddressEnv
+	} else if gAddressF != "" {
+		config.GRPCAddress = gAddressF
+	} else if configJSON.GRPCAddress != "" {
+		config.GRPCAddress = configJSON.GRPCAddress
 	}
 
 	return config

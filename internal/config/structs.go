@@ -7,10 +7,11 @@ import (
 
 type AgentConfig struct {
 	ServerAddress  string
-	Key            string
 	PollInterval   time.Duration
 	ReportInterval time.Duration
+	Key            string
 	PublicKeyPath  string
+	GRPCAddress    string
 }
 
 type AgentConfigJSON struct {
@@ -19,6 +20,7 @@ type AgentConfigJSON struct {
 	ReportInterval string `json:"report_interval,omitempty"`
 	PublicKeyPath  string `json:"crypto_key,omitempty"`
 	Key            string `json:"hash_key,omitempty"`
+	GRPCAddress    string `json:"grpc_address,omitempty"`
 }
 
 type ServerConfig struct {
@@ -31,6 +33,7 @@ type ServerConfig struct {
 	Restore        bool
 	PrivateKeyPath string
 	TrustedSubnet  net.IPNet
+	GRPCAddress    string
 }
 
 type ServerConfigJSON struct {
@@ -42,4 +45,5 @@ type ServerConfigJSON struct {
 	Restore        *bool  `json:"restore,omitempty"`
 	PrivateKeyPath string `json:"crypto_key,omitempty"`
 	TrustedSubnet  string `json:"trusted_subnet,omitempty"`
+	GRPCAddress    string `json:"grpc_address,omitempty"`
 }

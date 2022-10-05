@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/zklevsha/go-musthave-devops/internal/archive"
+	"github.com/zklevsha/go-musthave-devops/internal/pb"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
 )
 
@@ -150,4 +151,45 @@ func EncodeMetrics(store structs.Storage) ([]byte, error) {
 		return []byte{}, err
 	}
 	return json, nil
+}
+
+func DecodeGRPCMetric(in *pb.Metric) (structs.Metric, error) {
+	if in == nil {
+		return structs.Metric{}, fmt.Errorf("*pb.Metric is nil")
+	}
+
+	m := structs.Metric{
+		ID:    in.Id,
+		MType: in.Mtype,
+		Hash:  in.Hash,
+	}
+
+	if m.MType == "gauge" {
+		m.Value = &in.Value
+	} else if m.MType == "counter" {
+		m.Delta = &in.Delta
+	} else {
+		return structs.Metric{}, fmt.Errorf("metric type %s is not supported", m.MType)
+	}
+
+	return m, nil
+
+}
+
+func EncodeGRPCMetric(m structs.Metric) (*pb.Metric, error) {
+	p := pb.Metric{
+		Id:    m.ID,
+		Mtype: m.MType,
+		Hash:  m.Hash,
+	}
+
+	if m.MType == "gauge" {
+		p.Value = *m.Value
+	} else if m.MType == "counter" {
+		p.Delta = *m.Delta
+	} else {
+		return nil, fmt.Errorf("metric type %s is not supported", m.MType)
+	}
+
+	return &p, nil
 }

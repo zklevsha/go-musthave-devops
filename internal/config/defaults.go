@@ -11,6 +11,7 @@ const serverAddressDefault = "127.0.0.1:8080"
 const storeIntervalDefault = time.Duration(300 * time.Second)
 const storeFileDefault = "/tmp/devops-metrics-db.json"
 const restoreDefault = true
+const gAddressDefault = "127.0.0.1:5000"
 
 var trunstedSubnetDefault = net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.IPv4Mask(0, 0, 0, 0)}
 

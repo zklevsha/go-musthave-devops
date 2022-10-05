@@ -14,6 +14,7 @@ import (
 	"github.com/zklevsha/go-musthave-devops/internal/config"
 	"github.com/zklevsha/go-musthave-devops/internal/db"
 	"github.com/zklevsha/go-musthave-devops/internal/dumper"
+	"github.com/zklevsha/go-musthave-devops/internal/gserver"
 	"github.com/zklevsha/go-musthave-devops/internal/handlers"
 	"github.com/zklevsha/go-musthave-devops/internal/rsaencrypt"
 	"github.com/zklevsha/go-musthave-devops/internal/structs"
@@ -39,8 +40,8 @@ func main() {
 
 	config := config.GetServerConfig(os.Args[1:])
 
-	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t, privateKeyPath %s",
-		config.ServerAddress, config.UseDB, config.PrivateKeyPath)
+	logMsg := fmt.Sprintf("INFO main server config: ServerAddress: %s, UseDB: %t, privateKeyPath %s, GRPCAddress: %s",
+		config.ServerAddress, config.UseDB, config.PrivateKeyPath, config.GRPCAddress)
 	if !config.UseDB {
 		logMsg += fmt.Sprintf(", StoreInterval: %s, StoreFile: %s, Restore: %t",
 			config.StoreInterval, config.StoreFile, config.Restore)
@@ -77,7 +78,7 @@ func main() {
 
 	// Starting web server
 	handler := handlers.GetHandler(config, s, privKey)
-	fmt.Printf("INFO main starting web server at %s\n", config.ServerAddress)
+	fmt.Printf("INFO starting web server at %s\n", config.ServerAddress)
 
 	srv := &http.Server{
 		Addr:    config.ServerAddress,
@@ -91,10 +92,15 @@ func main() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			cancel()
 			wg.Wait()
-			log.Fatalf("Failed to start web server: %s\n", err)
+			log.Fatalf("CRITICAL Failed to start web server: %s\n", err)
 		}
 	}()
-	log.Print("Server Started\n")
+	log.Print("INFO web server was started\n")
+
+	// Srarting gRPC server
+	log.Printf("INFO starting gRPC server")
+	go gserver.Start(config.GRPCAddress, s)
+	log.Printf("INFO gRPC server was started")
 
 	// Handling shutdown
 	sig := <-done
